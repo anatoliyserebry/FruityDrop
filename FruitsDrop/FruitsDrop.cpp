@@ -32,9 +32,9 @@ struct HighScore {
 int currentScore = 0;
 int gameMode = 0; // 0: menu, 1: classic, 2: survival, 3: time attack
 float gameTime = 120.0f;
-int lives = 1;
+int lives = 3;
 int missedFruits = 0;
-int maxMissedFruits = 1;
+int maxMissedFruits = 10;
 bool gameOver = false;
 bool inMenu = true;
 
@@ -119,7 +119,7 @@ void DrawFruits(const std::vector<Fruit>& fruits) {
 
 void ResetGame() {
     currentScore = 0;
-    lives = 1;
+    lives = 3;
     missedFruits = 0;
     gameOver = false;
     gameTime = 120.0f;
