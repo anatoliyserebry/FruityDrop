@@ -13,14 +13,16 @@ struct Button {
     Rectangle rect; 
     std::string text; 
 };
-// Структура для fruits (хорошие, плохие) 
+// Структура для fruits (хорошие, плохие, бонусные) 
 struct Fruit {
-    Rectangle rect; 
-    int type; 
-    float speed; 
-    bool active; 
-    Color color; 
+    Rectangle rect;
+    int type; // 0-3: хорошие, 4-5: плохие, 6-9: бонусные
+    float speed;
+    bool active;
+    Color color;
+    float effectDuration;
 };
+
 // Структура для score 
 struct HighScore {
     std::string name;
@@ -42,12 +44,33 @@ float fruitSpeed = 3.0f;
 float spawnRate = 1.0f;
 float timeSinceLastSpawn = 0.0f;
 
+// Бонусные эффекты
+float slowMotionTimer = 0.0f;
+float doublePointsTimer = 0.0f;
+float freezeTimer = 0.0f;
+float speedBoostTimer = 0.0f;
+bool slowMotionActive = false;
+bool doublePointsActive = false;
+bool freezeActive = false;
+bool speedBoostActive = false;
+
 void MoveRectangle(Rectangle& rec, bool useArrowKeys) {
+    float moveSpeed = 5.0f;
+
+    // Увеличенная скорость при бонусе скорости
+    if (speedBoostActive) {
+        moveSpeed = 8.0f;
+    }
+    // Замедление при замедлении времени
+    if (slowMotionActive) {
+        moveSpeed = 3.0f;
+    }
+
     if ((useArrowKeys && IsKeyDown(KEY_LEFT)) || (!useArrowKeys && IsKeyDown(KEY_A))) {
-        rec.x -= 5;
+        rec.x -= moveSpeed;
     }
     if ((useArrowKeys && IsKeyDown(KEY_RIGHT)) || (!useArrowKeys && IsKeyDown(KEY_D))) {
-        rec.x += 5;
+        rec.x += moveSpeed;
     }
     if (rec.x + rec.width > screenWidth) {
         rec.x = screenWidth - rec.width;
@@ -60,24 +83,144 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys) {
 Fruit CreateFruit() {
     Fruit fruit;
     fruit.rect = { (float)GetRandomValue(50, screenWidth - 100), -50, 40, 40 };
-    fruit.type = GetRandomValue(0, 5);
+
+    // Определяем тип фрукта с учетом режима игры
+    int randomChance = GetRandomValue(0, 100);
+
+    // Редкий шанс появления бонусного фрукта (8%)
+    if (randomChance < 8) {
+        // Разные бонусы для разных режимов
+        if (gameMode == 2) { // Survival - более полезные бонусы
+            fruit.type = GetRandomValue(6, 8); // Slow motion, Double points, Extra life
+        }
+        else if (gameMode == 3) { // Time Attack - бонусы времени
+            fruit.type = GetRandomValue(9, 10); // Time bonus, Speed boost
+        }
+        else { // Classic - случайные бонусы
+            fruit.type = GetRandomValue(6, 10);
+        }
+    }
+    else if (randomChance < 35) { // 27% шанс для плохих фруктов
+        fruit.type = GetRandomValue(4, 5);
+    }
+    else { // 65% шанс для хороших фруктов
+        fruit.type = GetRandomValue(0, 3);
+    }
+
     fruit.active = true;
-    fruit.speed = fruitSpeed + GetRandomValue(0, 2);
+
+    // Базовая скорость с учетом активных эффектов
+    float baseSpeed = fruitSpeed + GetRandomValue(0, 2);
+    if (slowMotionActive) baseSpeed *= 0.4f;
+    if (speedBoostActive) baseSpeed *= 1.3f;
+    if (freezeActive) baseSpeed = 0.5f;
+
+    fruit.speed = baseSpeed;
+
+    // Устанавливаем цвета и длительность эффектов
+    switch (fruit.type) {
+    case 0: fruit.color = RED; break;      // Яблоко
+    case 1: fruit.color = YELLOW; break;   // Банан
+    case 2: fruit.color = GREEN; break;    // Арбуз
+    case 3: fruit.color = PURPLE; break;   // Виноград
+    case 4: fruit.color = BROWN; break;    // Гнилой фрукт
+    case 5: fruit.color = GRAY; break;     // Камень
+    case 6: fruit.color = BLUE; break;     // Замедление времени
+    case 7: fruit.color = GOLD; break;     // Двойные очки
+    case 8: fruit.color = PINK; break;     // Дополнительная жизнь
+    case 9: fruit.color = MAGENTA; break;  // Бонус времени
+    case 10: fruit.color = ORANGE; break;  // Ускорение
+    }
+
+    fruit.effectDuration = 5.0f; // 5 секунд для бонусных эффектов
+
     return fruit;
+}
+
+void UpdateBonusEffects() {
+    // Обновляем таймеры бонусов
+    if (slowMotionActive) {
+        slowMotionTimer -= GetFrameTime();
+        if (slowMotionTimer <= 0) {
+            slowMotionActive = false;
+        }
+    }
+
+    if (doublePointsActive) {
+        doublePointsTimer -= GetFrameTime();
+        if (doublePointsTimer <= 0) {
+            doublePointsActive = false;
+        }
+    }
+
+    if (freezeActive) {
+        freezeTimer -= GetFrameTime();
+        if (freezeTimer <= 0) {
+            freezeActive = false;
+        }
+    }
+
+    if (speedBoostActive) {
+        speedBoostTimer -= GetFrameTime();
+        if (speedBoostTimer <= 0) {
+            speedBoostActive = false;
+        }
+    }
+}
+
+void ApplyBonusEffect(int bonusType) {
+    switch (bonusType) {
+    case 6: // Замедление времени (особенно полезно в Survival)
+        slowMotionActive = true;
+        slowMotionTimer = 7.0f; // 7 секунд
+        break;
+
+    case 7: // Двойные очки
+        doublePointsActive = true;
+        doublePointsTimer = 10.0f; // 10 секунд
+        break;
+
+    case 8: // Дополнительная жизнь
+        if (lives < 5) { // Максимум 5 жизней
+            lives++;
+        }
+        break;
+
+    case 9: // Бонус времени (особенно полезно в Time Attack)
+        gameTime += 10.0f; // +10 секунд
+        break;
+
+    case 10: // Ускорение (полезно во всех режимах)
+        speedBoostActive = true;
+        speedBoostTimer = 6.0f; // 6 секунд
+        break;
+    }
 }
 
 void UpdateFruits(std::vector<Fruit>& fruits, Rectangle& basket) {
     for (auto& fruit : fruits) {
         if (fruit.active) {
-            fruit.rect.y += fruit.speed;
+            // Применяем активные эффекты к скорости падения
+            float currentSpeed = fruit.speed;
+            if (freezeActive) {
+                currentSpeed = 0.5f; // Почти остановка
+            }
+
+            fruit.rect.y += currentSpeed;
 
             if (CheckCollisionRecs(fruit.rect, basket)) {
-                if (fruit.type <= 3) {
-                    currentScore += 100;
+                if (fruit.type <= 3) { // Хорошие фрукты
+                    int points = 100;
+                    if (doublePointsActive) points *= 2;
+                    currentScore += points;
                 }
-                else {
+                else if (fruit.type <= 5) { // Плохие предметы
                     lives--;
                     if (lives <= 0) gameOver = true;
+                }
+                else { // Бонусные фрукты
+                    ApplyBonusEffect(fruit.type);
+                    currentScore += 200; // Дополнительные очки за бонус
                 }
                 fruit.active = false;
             }
@@ -103,15 +246,13 @@ void UpdateFruits(std::vector<Fruit>& fruits, Rectangle& basket) {
 void DrawFruits(const std::vector<Fruit>& fruits) {
     for (const auto& fruit : fruits) {
         if (fruit.active) {
-            if (fruit.type <= 3) {
-                // Good fruits - bright colors
-                DrawRectangleRec(fruit.rect, fruit.type == 0 ? RED :
-                    fruit.type == 1 ? YELLOW :
-                    fruit.type == 2 ? GREEN : PURPLE);
-            }
-            else {
-                // Bad items - dark colors
-                DrawRectangleRec(fruit.rect, fruit.type == 4 ? BROWN : GRAY);
+            DrawRectangleRec(fruit.rect, fruit.color);
+
+            // Специальные узоры для бонусных фруктов
+            if (fruit.type >= 6) {
+                // Рисуем звездочку для бонусных фруктов
+                DrawRectangle(fruit.rect.x + 15, fruit.rect.y + 5, 10, 30, WHITE);
+                DrawRectangle(fruit.rect.x + 5, fruit.rect.y + 15, 30, 10, WHITE);
             }
         }
     }
@@ -125,6 +266,16 @@ void ResetGame() {
     gameTime = 120.0f;
     fruitSpeed = 3.0f;
     spawnRate = 1.0f;
+
+    // Сбрасываем все бонусные эффекты
+    slowMotionActive = false;
+    doublePointsActive = false;
+    freezeActive = false;
+    speedBoostActive = false;
+    slowMotionTimer = 0.0f;
+    doublePointsTimer = 0.0f;
+    freezeTimer = 0.0f;
+    speedBoostTimer = 0.0f;
 }
 
 void DrawMenu() {
@@ -189,6 +340,9 @@ int main(void) {
         }
         else {
             if (!gameOver) {
+                // Обновляем бонусные эффекты
+                UpdateBonusEffects();
+
                 // Controls
                 MoveRectangle(basket, false);
 
@@ -245,16 +399,42 @@ int main(void) {
                     DrawText(TextFormat("%d", (int)gameTime), screenWidth - 80, 10, 30, DARKBLUE);
                 }
 
-                // Fruit legend 
-                DrawText("Good fruits:", 10, screenHeight - 120, 20, DARKGREEN);
-                DrawRectangle(130, screenHeight - 120, 20, 20, RED);
-                DrawRectangle(160, screenHeight - 120, 20, 20, YELLOW);
-                DrawRectangle(190, screenHeight - 120, 20, 20, GREEN);
-                DrawRectangle(220, screenHeight - 120, 20, 20, PURPLE);
+                // Отображение активных бонусов
+                int bonusY = 130;
+                if (slowMotionActive) {
+                    DrawText("Slow Motion!", 10, bonusY, 20, BLUE);
+                    bonusY += 25;
+                }
+                if (doublePointsActive) {
+                    DrawText("Double Points!", 10, bonusY, 20, GOLD);
+                    bonusY += 25;
+                }
+                if (speedBoostActive) {
+                    DrawText("Speed Boost!", 10, bonusY, 20, ORANGE);
+                    bonusY += 25;
+                }
+                if (freezeActive) {
+                    DrawText("Freeze!", 10, bonusY, 20, SKYBLUE);
+                    bonusY += 25;
+                }
 
-                DrawText("Bad items:", 10, screenHeight - 90, 20, DARKGREEN);
-                DrawRectangle(130, screenHeight - 90, 20, 20, BROWN);
-                DrawRectangle(160, screenHeight - 90, 20, 20, GRAY);
+                // Fruit legend с бонусными фруктами
+                DrawText("Good fruits:", 10, screenHeight - 150, 20, DARKGREEN);
+                DrawRectangle(130, screenHeight - 150, 20, 20, RED);
+                DrawRectangle(160, screenHeight - 150, 20, 20, YELLOW);
+                DrawRectangle(190, screenHeight - 150, 20, 20, GREEN);
+                DrawRectangle(220, screenHeight - 150, 20, 20, PURPLE);
+
+                DrawText("Bad items:", 10, screenHeight - 120, 20, DARKGREEN);
+                DrawRectangle(130, screenHeight - 120, 20, 20, BROWN);
+                DrawRectangle(160, screenHeight - 120, 20, 20, GRAY);
+
+                DrawText("Bonus fruits:", 10, screenHeight - 90, 20, DARKGREEN);
+                DrawRectangle(130, screenHeight - 90, 20, 20, BLUE);
+                DrawRectangle(160, screenHeight - 90, 20, 20, GOLD);
+                DrawRectangle(190, screenHeight - 90, 20, 20, PINK);
+                DrawRectangle(220, screenHeight - 90, 20, 20, MAGENTA);
+                DrawRectangle(250, screenHeight - 90, 20, 20, ORANGE);
 
             }
             else {
