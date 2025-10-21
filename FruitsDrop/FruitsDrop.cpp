@@ -119,17 +119,17 @@ Fruit CreateFruit() {
 
     // Устанавливаем цвета и длительность эффектов
     switch (fruit.type) {
-    case 0: fruit.color = RED; break;      // Яблоко
-    case 1: fruit.color = YELLOW; break;   // Банан
-    case 2: fruit.color = GREEN; break;    // Арбуз
-    case 3: fruit.color = PURPLE; break;   // Виноград
-    case 4: fruit.color = BROWN; break;    // Гнилой фрукт
-    case 5: fruit.color = GRAY; break;     // Камень
-    case 6: fruit.color = BLUE; break;     // Замедление времени
-    case 7: fruit.color = GOLD; break;     // Двойные очки
-    case 8: fruit.color = PINK; break;     // Дополнительная жизнь
-    case 9: fruit.color = MAGENTA; break;  // Бонус времени
-    case 10: fruit.color = ORANGE; break;  // Ускорение
+    case 0: fruit.color = RED; break;      
+    case 1: fruit.color = YELLOW; break;   
+    case 2: fruit.color = GREEN; break;    
+    case 3: fruit.color = PURPLE; break;   
+    case 4: fruit.color = BROWN; break;    
+    case 5: fruit.color = GRAY; break;     
+    case 6: fruit.color = BLUE; break;     
+    case 7: fruit.color = GOLD; break;     
+    case 8: fruit.color = PINK; break;     
+    case 9: fruit.color = MAGENTA; break;  
+    case 10: fruit.color = ORANGE; break;  
     }
 
     fruit.effectDuration = 5.0f; // 5 секунд для бонусных эффектов
