@@ -117,7 +117,7 @@ Fruit CreateFruit() {
 
     fruit.speed = baseSpeed;
 
-    // Устанавливаем цвета и длительность эффектов
+    // Цвета и длительность эффектов
     switch (fruit.type) {
     case 0: fruit.color = RED; break;      
     case 1: fruit.color = YELLOW; break;   
