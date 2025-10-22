@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <fstream>
 
 const int screenWidth = 800;
 const int screenHeight = 600;
@@ -30,15 +31,23 @@ struct HighScore {
     std::string mode;
 };
 
+// Структура для score
+struct PlayerBestScores {
+    int classicBest = 0;
+    int survivalBest = 0;
+    int timeAttackBest = 0;
+};
+
 // Global
 int currentScore = 0;
-int gameMode = 0; // 0: menu, 1: classic, 2: survival, 3: time attack
+int gameMode = 0; // 0: menu, 1: classic, 2: survival, 3: time attack, 5: top rating
 float gameTime = 120.0f;
 int lives = 3;
 int missedFruits = 0;
 int maxMissedFruits = 10;
 bool gameOver = false;
 bool inMenu = true;
+bool showTopRating = false;
 
 float fruitSpeed = 3.0f;
 float spawnRate = 1.0f;
@@ -54,16 +63,85 @@ bool doublePointsActive = false;
 bool freezeActive = false;
 bool speedBoostActive = false;
 
+//Для одного игрока
+PlayerBestScores playerScores;
+
+//Для работы с рекордами
+void LoadPlayerScores() {
+    playerScores.classicBest = 0;
+    playerScores.survivalBest = 0;
+    playerScores.timeAttackBest = 0;
+}
+
+void SavePlayerScore(int score, const std::string& mode) {
+    if (mode == "Classic" && score > playerScores.classicBest) {
+        playerScores.classicBest = score;
+    }
+    else if (mode == "Survival" && score > playerScores.survivalBest) {
+        playerScores.survivalBest = score;
+    }
+    else if (mode == "Time Attack" && score > playerScores.timeAttackBest) {
+        playerScores.timeAttackBest = score;
+    }
+}
+
+void DrawTopRating() {
+    ClearBackground(SKYBLUE);
+
+    DrawText("MY BEST SCORES", screenWidth / 2 - 150, 50, 40, DARKBLUE);
+
+    //Лучшие результаты по режимам
+    int startY = 150;
+
+    // Classic Mode
+    DrawText("CLASSIC MODE", screenWidth / 2 - 100, startY, 30, GREEN);
+    DrawText("Best Score:", screenWidth / 2 - 150, startY + 40, 25, WHITE);
+    DrawText(TextFormat("%d", playerScores.classicBest), screenWidth / 2 + 50, startY + 40, 25, GOLD);
+
+    // Survival Mode
+    DrawText("SURVIVAL MODE", screenWidth / 2 - 100, startY + 100, 30, BLUE);
+    DrawText("Best Score:", screenWidth / 2 - 150, startY + 140, 25, WHITE);
+    DrawText(TextFormat("%d", playerScores.survivalBest), screenWidth / 2 + 50, startY + 140, 25, GOLD);
+
+    // Time Attack Mode
+    DrawText("TIME ATTACK MODE", screenWidth / 2 - 120, startY + 200, 30, ORANGE);
+    DrawText("Best Score:", screenWidth / 2 - 150, startY + 240, 25, WHITE);
+    DrawText(TextFormat("%d", playerScores.timeAttackBest), screenWidth / 2 + 50, startY + 240, 25, GOLD);
+
+    // Статистика
+    DrawText("STATISTICS", screenWidth / 2 - 70, startY + 300, 25, PURPLE);
+
+    int totalBest = playerScores.classicBest + playerScores.survivalBest + playerScores.timeAttackBest;
+    DrawText(TextFormat("Total Best: %d", totalBest), screenWidth / 2 - 80, startY + 340, 20, WHITE);
+
+    // Определяем любимый режим
+    std::string favoriteMode = "Classic";
+    int maxScore = playerScores.classicBest;
+
+    if (playerScores.survivalBest > maxScore) {
+        maxScore = playerScores.survivalBest;
+        favoriteMode = "Survival";
+    }
+    if (playerScores.timeAttackBest > maxScore) {
+        maxScore = playerScores.timeAttackBest;
+        favoriteMode = "Time Attack";
+    }
+
+    DrawText(TextFormat("Favorite Mode: %s", favoriteMode.c_str()), screenWidth / 2 - 100, startY + 370, 20, WHITE);
+
+    DrawText("Press ESC to return", screenWidth / 2 - 100, screenHeight - 50, 20, WHITE);
+}
+
 void MoveRectangle(Rectangle& rec, bool useArrowKeys) {
-    float moveSpeed = 5.0f;
+    float moveSpeed = 10.0f;
 
     // Увеличенная скорость при бонусе скорости
     if (speedBoostActive) {
-        moveSpeed = 8.0f;
+        moveSpeed = 15.0f;
     }
     // Замедление при замедлении времени
     if (slowMotionActive) {
-        moveSpeed = 3.0f;
+        moveSpeed = 10.0f;
     }
 
     if ((useArrowKeys && IsKeyDown(KEY_LEFT)) || (!useArrowKeys && IsKeyDown(KEY_A))) {
@@ -119,17 +197,17 @@ Fruit CreateFruit() {
 
     // Цвета и длительность эффектов
     switch (fruit.type) {
-    case 0: fruit.color = RED; break;      
-    case 1: fruit.color = YELLOW; break;   
-    case 2: fruit.color = GREEN; break;    
-    case 3: fruit.color = PURPLE; break;   
-    case 4: fruit.color = BROWN; break;    
-    case 5: fruit.color = GRAY; break;     
-    case 6: fruit.color = BLUE; break;     
-    case 7: fruit.color = GOLD; break;     
-    case 8: fruit.color = PINK; break;     
-    case 9: fruit.color = MAGENTA; break;  
-    case 10: fruit.color = ORANGE; break;  
+    case 0: fruit.color = RED; break;
+    case 1: fruit.color = YELLOW; break;
+    case 2: fruit.color = GREEN; break;
+    case 3: fruit.color = PURPLE; break;
+    case 4: fruit.color = BROWN; break;
+    case 5: fruit.color = GRAY; break;
+    case 6: fruit.color = BLUE; break;
+    case 7: fruit.color = GOLD; break;
+    case 8: fruit.color = PINK; break;
+    case 9: fruit.color = MAGENTA; break;
+    case 10: fruit.color = ORANGE; break;
     }
 
     fruit.effectDuration = 5.0f; // 5 секунд для бонусных эффектов
@@ -281,23 +359,26 @@ void ResetGame() {
 void DrawMenu() {
     ClearBackground(SKYBLUE);
 
-    DrawText("FruityDrop", screenWidth / 2 - 100, 100, 40, DARKBLUE);
+    DrawText("FruityDrop", screenWidth / 2 - 100, 80, 40, DARKBLUE);
 
     // Menu buttons
-    Rectangle classicBtn = { screenWidth / 2 - 100, 200, 200, 50 };
-    Rectangle survivalBtn = { screenWidth / 2 - 100, 270, 200, 50 };
-    Rectangle timeBtn = { screenWidth / 2 - 100, 340, 200, 50 };
-    Rectangle exitBtn = { screenWidth / 2 - 100, 410, 200, 50 };
+    Rectangle classicBtn = { screenWidth / 2 - 100, 180, 200, 50 };
+    Rectangle survivalBtn = { screenWidth / 2 - 100, 250, 200, 50 };
+    Rectangle timeBtn = { screenWidth / 2 - 100, 320, 200, 50 };
+    Rectangle ratingBtn = { screenWidth / 2 - 100, 390, 200, 50 };
+    Rectangle exitBtn = { screenWidth / 2 - 100, 460, 200, 50 };
 
     DrawRectangleRec(classicBtn, GREEN);
     DrawRectangleRec(survivalBtn, BLUE);
     DrawRectangleRec(timeBtn, ORANGE);
+    DrawRectangleRec(ratingBtn, PURPLE);
     DrawRectangleRec(exitBtn, RED);
 
     // English text 
     DrawText("Classic", classicBtn.x + 60, classicBtn.y + 15, 20, WHITE);
     DrawText("Survival", survivalBtn.x + 50, survivalBtn.y + 15, 20, WHITE);
     DrawText("Time Attack", timeBtn.x + 35, timeBtn.y + 15, 20, WHITE);
+    DrawText("My Scores", ratingBtn.x + 50, ratingBtn.y + 15, 20, WHITE);
     DrawText("Exit", exitBtn.x + 75, exitBtn.y + 15, 20, WHITE);
 
     // Handle clicks 
@@ -318,6 +399,9 @@ void DrawMenu() {
             gameMode = 3;
             ResetGame();
         }
+        if (CheckCollisionPointRec(mousePoint, ratingBtn)) {
+            showTopRating = true;
+        }
         if (CheckCollisionPointRec(mousePoint, exitBtn)) {
             gameMode = 4;
         }
@@ -328,14 +412,25 @@ int main(void) {
     InitWindow(screenWidth, screenHeight, "FruityDrop");
     SetTargetFPS(60);
 
+    // Загружаем рекорды игрока при запуске
+    LoadPlayerScores();
+
     Rectangle basket = { screenWidth / 2 - 50, screenHeight - 100, 100, 60 };
     std::vector<Fruit> fruits;
 
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(RAYWHITE);
+
         if (gameMode == 4) break;
-        if (inMenu) {
+
+        if (showTopRating) {
+            DrawTopRating();
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                showTopRating = false;
+            }
+        }
+        else if (inMenu) {
             DrawMenu();
         }
         else {
@@ -438,20 +533,54 @@ int main(void) {
 
             }
             else {
-                // Game over screen 
-                DrawText("Game Over!", screenWidth / 2 - 80, 200, 40, RED);
+                // Game over screen - сохраняем рекорд
+                const char* modeName = "";
+                std::string modeStr = "";
+
+                if (gameMode == 1) {
+                    modeName = "Classic Mode";
+                    modeStr = "Classic";
+                }
+                else if (gameMode == 2) {
+                    modeName = "Survival Mode";
+                    modeStr = "Survival";
+                }
+                else if (gameMode == 3) {
+                    modeName = "Time Attack";
+                    modeStr = "Time Attack";
+                }
+
+                // Сохраняем рекорд если он лучше предыдущего
+                SavePlayerScore(currentScore, modeStr);
+
+                // Проверяем, побит ли рекорд
+                bool newRecord = false;
+                if (gameMode == 1 && currentScore > playerScores.classicBest) newRecord = true;
+                else if (gameMode == 2 && currentScore > playerScores.survivalBest) newRecord = true;
+                else if (gameMode == 3 && currentScore > playerScores.timeAttackBest) newRecord = true;
+
+                DrawText("Game Over!", screenWidth / 2 - 80, 170, 40, RED);
+
+                if (newRecord) {
+                    DrawText("NEW RECORD!", screenWidth / 2 - 80, 210, 30, GOLD);
+                }
+
                 DrawText(TextFormat("Final Score: %d", currentScore), screenWidth / 2 - 70, 250, 30, DARKBLUE);
-                DrawText("Press SPACE for menu", screenWidth / 2 - 100, 300, 20, DARKBLUE);
+                DrawText("Press SPACE for menu", screenWidth / 2 - 100, 290, 20, DARKBLUE);
+                DrawText("Press R for My Scores", screenWidth / 2 - 100, 320, 20, DARKBLUE);
 
                 if (IsKeyPressed(KEY_SPACE)) {
                     inMenu = true;
                     fruits.clear();
                 }
+                if (IsKeyPressed(KEY_R)) {
+                    showTopRating = true;
+                }
             }
         }
 
         // Return to menu
-        if (IsKeyPressed(KEY_ESCAPE) && !inMenu) {
+        if (IsKeyPressed(KEY_ESCAPE) && !inMenu && !showTopRating) {
             inMenu = true;
             fruits.clear();
         }
