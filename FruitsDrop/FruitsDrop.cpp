@@ -96,7 +96,7 @@ Fruit CreateFruit() {
         else if (gameMode == 3) { // Time Attack - бонусы времени
             fruit.type = GetRandomValue(9, 10); // Time bonus, Speed boost
         }
-        else { // Classic - случайные бонусы
+        else { // Classic = случайные бонусы
             fruit.type = GetRandomValue(6, 10);
         }
     }
