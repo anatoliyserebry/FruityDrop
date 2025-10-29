@@ -33,6 +33,18 @@ struct PlayerBestScores {
     int twoPlayerBest = 0;
 };
 
+// Структура для бонусных эффектов игрока
+struct PlayerBonusEffects {
+    float slowMotionTimer = 0.0f;
+    float doublePointsTimer = 0.0f;
+    float freezeTimer = 0.0f;
+    float speedBoostTimer = 0.0f;
+    bool slowMotionActive = false;
+    bool doublePointsActive = false;
+    bool freezeActive = false;
+    bool speedBoostActive = false;
+};
+
 // Структура для игрока
 struct Player {
     Rectangle basket;
@@ -41,6 +53,8 @@ struct Player {
     int missedFruits;
     std::string name;
     Color color;
+    PlayerBonusEffects bonuses;
+    bool isAlive;
 };
 
 // Global
@@ -54,7 +68,7 @@ float fruitSpeed = 3.0f;
 float spawnRate = 1.0f;
 float timeSinceLastSpawn = 0.0f;
 
-// Бонусные эффекты
+// Глобальные бонусные эффекты (только для одиночных режимов)
 float slowMotionTimer = 0.0f;
 float doublePointsTimer = 0.0f;
 float freezeTimer = 0.0f;
@@ -149,16 +163,39 @@ void DrawTopRating() {
     DrawText("Press ESC to return", screenWidth / 2 - 100, screenHeight - 50, 20, WHITE);
 }
 
-void MoveRectangle(Rectangle& rec, bool useArrowKeys) {
+void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
     float moveSpeed = 10.0f;
 
     // Увеличенная скорость при бонусе скорости
-    if (speedBoostActive) {
-        moveSpeed = 15.0f;
+    if (gameMode == 4) {
+        // В режиме двух игроков используем индивидуальные бонусы
+        if (playerSide == 1 && player1.bonuses.speedBoostActive) {
+            moveSpeed = 15.0f;
+        }
+        else if (playerSide == 2 && player2.bonuses.speedBoostActive) {
+            moveSpeed = 15.0f;
+        }
     }
+    else {
+        // В одиночных режимах используем глобальные бонусы
+        if (speedBoostActive) {
+            moveSpeed = 15.0f;
+        }
+    }
+
     // Замедление при замедлении времени
-    if (slowMotionActive) {
-        moveSpeed = 10.0f;
+    if (gameMode == 4) {
+        if (playerSide == 1 && player1.bonuses.slowMotionActive) {
+            moveSpeed = 10.0f;
+        }
+        else if (playerSide == 2 && player2.bonuses.slowMotionActive) {
+            moveSpeed = 10.0f;
+        }
+    }
+    else {
+        if (slowMotionActive) {
+            moveSpeed = 10.0f;
+        }
     }
 
     if ((useArrowKeys && IsKeyDown(KEY_LEFT)) || (!useArrowKeys && IsKeyDown(KEY_A))) {
@@ -167,17 +204,38 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys) {
     if ((useArrowKeys && IsKeyDown(KEY_RIGHT)) || (!useArrowKeys && IsKeyDown(KEY_D))) {
         rec.x += moveSpeed;
     }
-    if (rec.x + rec.width > screenWidth) {
-        rec.x = screenWidth - rec.width;
+
+    // Ограничения для разделенного экрана в режиме двух игроков
+    if (gameMode == 4) {
+        if (playerSide == 1) { // Player 1 - левая сторона
+            if (rec.x < 0) rec.x = 0;
+            if (rec.x + rec.width > screenWidth / 2) rec.x = screenWidth / 2 - rec.width;
+        }
+        else if (playerSide == 2) { // Player 2 - правая сторона
+            if (rec.x < screenWidth / 2) rec.x = screenWidth / 2;
+            if (rec.x + rec.width > screenWidth) rec.x = screenWidth - rec.width;
+        }
     }
-    if (rec.x < 0) {
-        rec.x = 0;
+    else {
+        // Обычные ограничения для одиночных режимов
+        if (rec.x + rec.width > screenWidth) rec.x = screenWidth - rec.width;
+        if (rec.x < 0) rec.x = 0;
     }
 }
 
-Fruit CreateFruit() {
+Fruit CreateFruit(int playerSide = 0) {
     Fruit fruit;
-    fruit.rect = { (float)GetRandomValue(50, screenWidth - 100), -50, 40, 40 };
+
+    // Определяем позицию в зависимости от стороны игрока
+    if (playerSide == 1) { // Для игрока 1 (левая сторона)
+        fruit.rect = { (float)GetRandomValue(50, screenWidth / 2 - 100), -50, 40, 40 };
+    }
+    else if (playerSide == 2) { // Для игрока 2 (правая сторона)
+        fruit.rect = { (float)GetRandomValue(screenWidth / 2 + 50, screenWidth - 100), -50, 40, 40 };
+    }
+    else { // Для одиночных режимов
+        fruit.rect = { (float)GetRandomValue(50, screenWidth - 100), -50, 40, 40 };
+    }
 
     // Определяем тип фрукта с учетом режима игры
     int randomChance = GetRandomValue(0, 100);
@@ -206,9 +264,22 @@ Fruit CreateFruit() {
 
     // Базовая скорость с учетом активных эффектов
     float baseSpeed = fruitSpeed + GetRandomValue(0, 2);
-    if (slowMotionActive) baseSpeed *= 0.4f;
-    if (speedBoostActive) baseSpeed *= 1.3f;
-    if (freezeActive) baseSpeed = 0.5f;
+
+    // В режиме двух игроков учитываем индивидуальные эффекты заморозки
+    if (gameMode == 4) {
+        if (playerSide == 1 && player1.bonuses.freezeActive) baseSpeed = 0.5f;
+        else if (playerSide == 2 && player2.bonuses.freezeActive) baseSpeed = 0.5f;
+        else {
+            if (player1.bonuses.slowMotionActive || player2.bonuses.slowMotionActive) baseSpeed *= 0.4f;
+            if (player1.bonuses.speedBoostActive || player2.bonuses.speedBoostActive) baseSpeed *= 1.3f;
+        }
+    }
+    else {
+        // В одиночных режимах используем глобальные эффекты
+        if (slowMotionActive) baseSpeed *= 0.4f;
+        if (speedBoostActive) baseSpeed *= 1.3f;
+        if (freezeActive) baseSpeed = 0.5f;
+    }
 
     fruit.speed = baseSpeed;
 
@@ -233,7 +304,7 @@ Fruit CreateFruit() {
 }
 
 void UpdateBonusEffects() {
-    // Обновляем таймеры бонусов
+    // Обновляем таймеры бонусов для одиночных режимов
     if (slowMotionActive) {
         slowMotionTimer -= GetFrameTime();
         if (slowMotionTimer <= 0) {
@@ -261,35 +332,137 @@ void UpdateBonusEffects() {
             speedBoostActive = false;
         }
     }
+
+    // Обновляем таймеры бонусов для игроков в режиме двух игроков
+    if (gameMode == 4) {
+        // Player 1
+        if (player1.isAlive) {
+            if (player1.bonuses.slowMotionActive) {
+                player1.bonuses.slowMotionTimer -= GetFrameTime();
+                if (player1.bonuses.slowMotionTimer <= 0) {
+                    player1.bonuses.slowMotionActive = false;
+                }
+            }
+            if (player1.bonuses.doublePointsActive) {
+                player1.bonuses.doublePointsTimer -= GetFrameTime();
+                if (player1.bonuses.doublePointsTimer <= 0) {
+                    player1.bonuses.doublePointsActive = false;
+                }
+            }
+            if (player1.bonuses.freezeActive) {
+                player1.bonuses.freezeTimer -= GetFrameTime();
+                if (player1.bonuses.freezeTimer <= 0) {
+                    player1.bonuses.freezeActive = false;
+                }
+            }
+            if (player1.bonuses.speedBoostActive) {
+                player1.bonuses.speedBoostTimer -= GetFrameTime();
+                if (player1.bonuses.speedBoostTimer <= 0) {
+                    player1.bonuses.speedBoostActive = false;
+                }
+            }
+        }
+
+        // Player 2
+        if (player2.isAlive) {
+            if (player2.bonuses.slowMotionActive) {
+                player2.bonuses.slowMotionTimer -= GetFrameTime();
+                if (player2.bonuses.slowMotionTimer <= 0) {
+                    player2.bonuses.slowMotionActive = false;
+                }
+            }
+            if (player2.bonuses.doublePointsActive) {
+                player2.bonuses.doublePointsTimer -= GetFrameTime();
+                if (player2.bonuses.doublePointsTimer <= 0) {
+                    player2.bonuses.doublePointsActive = false;
+                }
+            }
+            if (player2.bonuses.freezeActive) {
+                player2.bonuses.freezeTimer -= GetFrameTime();
+                if (player2.bonuses.freezeTimer <= 0) {
+                    player2.bonuses.freezeActive = false;
+                }
+            }
+            if (player2.bonuses.speedBoostActive) {
+                player2.bonuses.speedBoostTimer -= GetFrameTime();
+                if (player2.bonuses.speedBoostTimer <= 0) {
+                    player2.bonuses.speedBoostActive = false;
+                }
+            }
+        }
+    }
 }
 
-void ApplyBonusEffect(int bonusType) {
-    switch (bonusType) {
-    case 6: // Замедление времени (особенно полезно в Survival)
-        slowMotionActive = true;
-        slowMotionTimer = 7.0f; // 7 секунд
-        break;
-
-    case 7: // Двойные очки
-        doublePointsActive = true;
-        doublePointsTimer = 10.0f; // 10 секунд
-        break;
-
-    case 8: // Дополнительная жизнь
-        if (gameMode == 4) { // В режиме двух игроков добавляем жизнь обоим
-            if (player1.lives < 5) player1.lives++;
-            if (player2.lives < 5) player2.lives++;
+void ApplyBonusEffect(int bonusType, int playerNumber = 0) {
+    if (gameMode == 4) {
+        // В режиме двух игроков применяем бонусы индивидуально
+        if (playerNumber == 1 && player1.isAlive) {
+            switch (bonusType) {
+            case 6: // Замедление времени
+                player1.bonuses.slowMotionActive = true;
+                player1.bonuses.slowMotionTimer = 7.0f;
+                break;
+            case 7: // Двойные очки
+                player1.bonuses.doublePointsActive = true;
+                player1.bonuses.doublePointsTimer = 10.0f;
+                break;
+            case 8: // Дополнительная жизнь
+                if (player1.lives < 5) player1.lives++;
+                break;
+            case 9: // Бонус времени
+                gameTime += 10.0f;
+                break;
+            case 10: // Ускорение
+                player1.bonuses.speedBoostActive = true;
+                player1.bonuses.speedBoostTimer = 6.0f;
+                break;
+            }
         }
-        break;
-
-    case 9: // Бонус времени (особенно полезно в Time Attack)
-        gameTime += 10.0f; // +10 секунд
-        break;
-
-    case 10: // Ускорение (полезно во всех режимах)
-        speedBoostActive = true;
-        speedBoostTimer = 6.0f; // 6 секунд
-        break;
+        else if (playerNumber == 2 && player2.isAlive) {
+            switch (bonusType) {
+            case 6: // Замедление времени
+                player2.bonuses.slowMotionActive = true;
+                player2.bonuses.slowMotionTimer = 7.0f;
+                break;
+            case 7: // Двойные очки
+                player2.bonuses.doublePointsActive = true;
+                player2.bonuses.doublePointsTimer = 10.0f;
+                break;
+            case 8: // Дополнительная жизнь
+                if (player2.lives < 5) player2.lives++;
+                break;
+            case 9: // Бонус времени
+                gameTime += 10.0f;
+                break;
+            case 10: // Ускорение
+                player2.bonuses.speedBoostActive = true;
+                player2.bonuses.speedBoostTimer = 6.0f;
+                break;
+            }
+        }
+    }
+    else {
+        // В одиночных режимах используем глобальные бонусы
+        switch (bonusType) {
+        case 6: // Замедление времени
+            slowMotionActive = true;
+            slowMotionTimer = 7.0f;
+            break;
+        case 7: // Двойные очки
+            doublePointsActive = true;
+            doublePointsTimer = 10.0f;
+            break;
+        case 8: // Дополнительная жизнь
+            if (player1.lives < 5) player1.lives++;
+            break;
+        case 9: // Бонус времени
+            gameTime += 10.0f;
+            break;
+        case 10: // Ускорение
+            speedBoostActive = true;
+            speedBoostTimer = 6.0f;
+            break;
+        }
     }
 }
 
@@ -298,8 +471,21 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
         if (fruit.active) {
             // Применяем активные эффекты к скорости падения
             float currentSpeed = fruit.speed;
-            if (freezeActive) {
-                currentSpeed = 0.5f; // Почти остановка
+
+            if (gameMode == 4) {
+                // В режиме двух игроков учитываем индивидуальные эффекты заморозки
+                if (fruit.rect.x < screenWidth / 2 && player1.bonuses.freezeActive) {
+                    currentSpeed = 0.5f;
+                }
+                else if (fruit.rect.x >= screenWidth / 2 && player2.bonuses.freezeActive) {
+                    currentSpeed = 0.5f;
+                }
+            }
+            else {
+                // В одиночных режимах используем глобальные эффекты
+                if (freezeActive) {
+                    currentSpeed = 0.5f;
+                }
             }
 
             fruit.rect.y += currentSpeed;
@@ -308,34 +494,40 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
             bool collision = false;
 
             if (gameMode == 4) { // Режим двух игроков
-                if (CheckCollisionRecs(fruit.rect, player1.basket)) {
+                if (player1.isAlive && CheckCollisionRecs(fruit.rect, player1.basket)) {
                     collision = true;
                     if (fruit.type <= 3) { // Хорошие фрукты
                         int points = 100;
-                        if (doublePointsActive) points *= 2;
+                        if (player1.bonuses.doublePointsActive) points *= 2;
                         player1.score += points;
                     }
                     else if (fruit.type <= 5) { // Плохие предметы
                         player1.lives--;
+                        if (player1.lives <= 0) {
+                            player1.isAlive = false;
+                        }
                     }
                     else { // Бонусные фрукты
-                        ApplyBonusEffect(fruit.type);
-                        player1.score += 200; // Дополнительные очки за бонус
+                        ApplyBonusEffect(fruit.type, 1);
+                        player1.score += 200;
                     }
                 }
-                else if (CheckCollisionRecs(fruit.rect, player2.basket)) {
+                else if (player2.isAlive && CheckCollisionRecs(fruit.rect, player2.basket)) {
                     collision = true;
                     if (fruit.type <= 3) { // Хорошие фрукты
                         int points = 100;
-                        if (doublePointsActive) points *= 2;
+                        if (player2.bonuses.doublePointsActive) points *= 2;
                         player2.score += points;
                     }
                     else if (fruit.type <= 5) { // Плохие предметы
                         player2.lives--;
+                        if (player2.lives <= 0) {
+                            player2.isAlive = false;
+                        }
                     }
                     else { // Бонусные фрукты
-                        ApplyBonusEffect(fruit.type);
-                        player2.score += 200; // Дополнительные очки за бонус
+                        ApplyBonusEffect(fruit.type, 2);
+                        player2.score += 200;
                     }
                 }
             }
@@ -352,7 +544,7 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
                     }
                     else { // Бонусные фрукты
                         ApplyBonusEffect(fruit.type);
-                        player1.score += 200; // Дополнительные очки за бонус
+                        player1.score += 200;
                     }
                 }
             }
@@ -361,12 +553,23 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
                 fruit.active = false;
             }
 
+            // Проверка пропущенных фруктов
             if (fruit.rect.y > screenHeight) {
-                if (fruit.type <= 3) {
+                if (fruit.type <= 3) { // Только хорошие фрукты считаются как пропущенные
                     if (gameMode == 4) {
-                        // В режиме двух игроков пропущенные фрукты считаются обоим игрокам
-                        player1.missedFruits++;
-                        player2.missedFruits++;
+                        // Определяем, какой игрок пропустил фрукт
+                        if (fruit.rect.x < screenWidth / 2 && player1.isAlive) {
+                            player1.missedFruits++;
+                            if (player1.missedFruits >= 10) {
+                                player1.isAlive = false;
+                            }
+                        }
+                        else if (fruit.rect.x >= screenWidth / 2 && player2.isAlive) {
+                            player2.missedFruits++;
+                            if (player2.missedFruits >= 10) {
+                                player2.isAlive = false;
+                            }
+                        }
                     }
                     else {
                         player1.missedFruits++;
@@ -392,7 +595,6 @@ void DrawFruits(const std::vector<Fruit>& fruits) {
 
             // Специальные узоры для бонусных фруктов
             if (fruit.type >= 6) {
-                // Рисуем звездочку для бонусных фруктов
                 DrawRectangle(fruit.rect.x + 15, fruit.rect.y + 5, 10, 30, WHITE);
                 DrawRectangle(fruit.rect.x + 5, fruit.rect.y + 15, 30, 10, WHITE);
             }
@@ -413,6 +615,9 @@ void ResetGame() {
     player1.missedFruits = 0;
     player1.name = "Player 1";
     player1.color = BLUE;
+    player1.isAlive = true;
+    // Сброс бонусов игрока 1
+    player1.bonuses = PlayerBonusEffects();
 
     player2.basket = { 3 * screenWidth / 4 - 50, screenHeight - 100, 100, 60 };
     player2.score = 0;
@@ -420,8 +625,11 @@ void ResetGame() {
     player2.missedFruits = 0;
     player2.name = "Player 2";
     player2.color = RED;
+    player2.isAlive = true;
+    // Сброс бонусов игрока 2
+    player2.bonuses = PlayerBonusEffects();
 
-    // Сбрасываем все бонусные эффекты
+    // Сбрасываем все глобальные бонусные эффекты
     slowMotionActive = false;
     doublePointsActive = false;
     freezeActive = false;
@@ -452,7 +660,6 @@ void DrawMenu() {
     DrawRectangleRec(ratingBtn, DARKPURPLE);
     DrawRectangleRec(exitBtn, RED);
 
-    // English text 
     DrawText("Classic", classicBtn.x + 60, classicBtn.y + 15, 20, WHITE);
     DrawText("Survival", survivalBtn.x + 50, survivalBtn.y + 15, 20, WHITE);
     DrawText("Time Attack", timeBtn.x + 35, timeBtn.y + 15, 20, WHITE);
@@ -496,9 +703,7 @@ int main(void) {
     InitWindow(screenWidth, screenHeight, "FruityDrop");
     SetTargetFPS(60);
 
-    // Загружаем рекорды игрока при запуске
     LoadPlayerScores();
-
     std::vector<Fruit> fruits;
 
     while (!WindowShouldClose()) {
@@ -518,44 +723,50 @@ int main(void) {
         }
         else {
             if (!gameOver) {
-                // Обновляем бонусные эффекты
                 UpdateBonusEffects();
 
-                // Controls
+                // Controls - только для живых игроков
                 if (gameMode == 4) {
-                    // Два игрока: Player 1 - WASD, Player 2 - стрелки
-                    MoveRectangle(player1.basket, false); // WASD
-                    MoveRectangle(player2.basket, true);  // Стрелки
+                    if (player1.isAlive) MoveRectangle(player1.basket, false, 1); // Player 1 - левая сторона
+                    if (player2.isAlive) MoveRectangle(player2.basket, true, 2);  // Player 2 - правая сторона
                 }
                 else {
-                    // Один игрок
                     MoveRectangle(player1.basket, false);
                 }
 
-                // Timer for time attack mode
-                if (gameMode == 3) {
+                // Timer only for Time Attack and Two Players modes
+                if (gameMode == 3 || gameMode == 4) {
                     gameTime -= GetFrameTime();
-                    if (gameTime <= 0) gameOver = true;
-                }
-
-                // Проверка условий завершения игры
-                if (gameMode == 4) {
-                    // В режиме двух игроков игра заканчивается, когда у обоих закончились жизни
-                    if (player1.lives <= 0 && player2.lives <= 0) {
+                    if (gameTime <= 0) {
                         gameOver = true;
                     }
                 }
-                else {
+
+                // Проверка условий завершения игры для всех режимов
+                if (gameMode == 4) {
+                    // В режиме двух игроков игра заканчивается по таймеру или если оба игрока проиграли
+                    if (gameTime <= 0 || (!player1.isAlive && !player2.isAlive)) {
+                        gameOver = true;
+                    }
+                }
+                else if (gameMode == 1 || gameMode == 2) {
                     // В одиночных режимах
                     if (player1.lives <= 0 || player1.missedFruits >= 10) {
                         gameOver = true;
                     }
                 }
 
-                // Spawn fruits
+                // Spawn fruits только для живых игроков
                 timeSinceLastSpawn += GetFrameTime();
                 if (timeSinceLastSpawn >= spawnRate) {
-                    fruits.push_back(CreateFruit());
+                    if (gameMode == 4) {
+                        // Для двух игроков создаем фрукты только для живых игроков
+                        if (player1.isAlive) fruits.push_back(CreateFruit(1)); // Для игрока 1
+                        if (player2.isAlive) fruits.push_back(CreateFruit(2)); // Для игрока 2
+                    }
+                    else {
+                        fruits.push_back(CreateFruit());
+                    }
                     timeSinceLastSpawn = 0.0f;
 
                     // Difficulty settings
@@ -568,55 +779,116 @@ int main(void) {
                         fruitSpeed = 4.0f;
                     }
                     else if (gameMode == 4) {
-                        spawnRate = 0.6f; // Немного быстрее для двух игроков
+                        spawnRate = 0.6f;
                         fruitSpeed = 4.0f;
                     }
                 }
 
-                // Update fruits
                 UpdateFruits(fruits);
 
                 // Drawing
                 if (gameMode == 4) {
-                    // Рисуем корзины двух игроков разными цветами
-                    DrawRectangleRec(player1.basket, player1.color);
-                    DrawRectangleRec(player2.basket, player2.color);
-                    DrawText("Player 1", player1.basket.x + 20, player1.basket.y - 25, 20, player1.color);
-                    DrawText("Player 2", player2.basket.x + 20, player2.basket.y - 25, 20, player2.color);
+                    // Разделенный экран для двух игроков
+                    DrawRectangle(0, 0, screenWidth / 2, screenHeight, Fade(SKYBLUE, 0.1f));
+                    DrawRectangle(screenWidth / 2, 0, screenWidth / 2, screenHeight, Fade(LIGHTGRAY, 0.1f));
+
+                    // Разделительная линия
+                    DrawLine(screenWidth / 2, 0, screenWidth / 2, screenHeight, DARKGRAY);
+
+                    // Рисуем корзины только живых игроков
+                    if (player1.isAlive) DrawRectangleRec(player1.basket, player1.color);
+                    if (player2.isAlive) DrawRectangleRec(player2.basket, player2.color);
                 }
                 else {
                     DrawRectangleRec(player1.basket, ORANGE);
-                    DrawText("Basket", player1.basket.x + 20, player1.basket.y - 25, 20, DARKBROWN);
                 }
 
                 DrawFruits(fruits);
 
-                // UI 
+                // UI
                 if (gameMode == 4) {
-                    // Отображение статистики для двух игроков
-                    DrawText("PLAYER 1", 10, 10, 25, BLUE);
-                    DrawText(TextFormat("Score: %d", player1.score), 10, 40, 20, DARKBLUE);
-                    DrawText(TextFormat("Lives: %d", player1.lives), 10, 65, 20, RED);
-                    DrawText(TextFormat("Missed: %d/10", player1.missedFruits), 10, 90, 20, DARKBLUE);
+                    // Player 1 UI (левая сторона - слева)
+                    DrawText("PLAYER 1", 20, 10, 25, BLUE);
+                    DrawText(TextFormat("Score: %d", player1.score), 20, 40, 20, DARKBLUE);
+                    DrawText(TextFormat("Lives: %d", player1.lives), 20, 65, 20, player1.isAlive ? RED : GRAY);
+                    DrawText(TextFormat("Missed: %d/10", player1.missedFruits), 20, 90, 20, DARKBLUE);
+                    if (!player1.isAlive) DrawText("ELIMINATED!", 20, 115, 15, RED);
 
+                    // Player 2 UI (правая сторона - справа)
                     DrawText("PLAYER 2", screenWidth - 150, 10, 25, RED);
                     DrawText(TextFormat("Score: %d", player2.score), screenWidth - 150, 40, 20, DARKBLUE);
-                    DrawText(TextFormat("Lives: %d", player2.lives), screenWidth - 150, 65, 20, RED);
+                    DrawText(TextFormat("Lives: %d", player2.lives), screenWidth - 150, 65, 20, player2.isAlive ? RED : GRAY);
                     DrawText(TextFormat("Missed: %d/10", player2.missedFruits), screenWidth - 150, 90, 20, DARKBLUE);
+                    if (!player2.isAlive) DrawText("ELIMINATED!", screenWidth - 150, 115, 15, RED);
+
+                    // Таймер по центру
+                    DrawText(TextFormat("Time: %d", (int)gameTime), screenWidth / 2 - 40, 10, 25, DARKBLUE);
+
+                    // Отображение активных бонусов для каждого живого игрока
+                    int bonusY1 = 140;
+                    int bonusY2 = 140;
+
+                    // Бонусы Player 1 (слева)
+                    if (player1.isAlive) {
+                        if (player1.bonuses.slowMotionActive) {
+                            DrawText("Slow Motion!", 20, bonusY1, 15, BLUE);
+                            bonusY1 += 20;
+                        }
+                        if (player1.bonuses.doublePointsActive) {
+                            DrawText("Double Points!", 20, bonusY1, 15, GOLD);
+                            bonusY1 += 20;
+                        }
+                        if (player1.bonuses.speedBoostActive) {
+                            DrawText("Speed Boost!", 20, bonusY1, 15, ORANGE);
+                            bonusY1 += 20;
+                        }
+                        if (player1.bonuses.freezeActive) {
+                            DrawText("Freeze!", 20, bonusY1, 15, SKYBLUE);
+                            bonusY1 += 20;
+                        }
+                    }
+
+                    // Бонусы Player 2 (справа)
+                    if (player2.isAlive) {
+                        if (player2.bonuses.slowMotionActive) {
+                            DrawText("Slow Motion!", screenWidth - 150, bonusY2, 15, BLUE);
+                            bonusY2 += 20;
+                        }
+                        if (player2.bonuses.doublePointsActive) {
+                            DrawText("Double Points!", screenWidth - 150, bonusY2, 15, GOLD);
+                            bonusY2 += 20;
+                        }
+                        if (player2.bonuses.speedBoostActive) {
+                            DrawText("Speed Boost!", screenWidth - 150, bonusY2, 15, ORANGE);
+                            bonusY2 += 20;
+                        }
+                        if (player2.bonuses.freezeActive) {
+                            DrawText("Freeze!", screenWidth - 150, bonusY2, 15, SKYBLUE);
+                            bonusY2 += 20;
+                        }
+                    }
 
                     // Отображение лидера
-                    if (player1.score > player2.score) {
-                        DrawText("PLAYER 1 LEADING!", screenWidth / 2 - 80, 10, 20, BLUE);
+                    if (player1.isAlive && player2.isAlive) {
+                        if (player1.score > player2.score) {
+                            DrawText("PLAYER 1 LEADING!", screenWidth / 2 - 80, screenHeight - 30, 20, BLUE);
+                        }
+                        else if (player2.score > player1.score) {
+                            DrawText("PLAYER 2 LEADING!", screenWidth / 2 - 80, screenHeight - 30, 20, RED);
+                        }
+                        else {
+                            DrawText("TIE!", screenWidth / 2 - 20, screenHeight - 30, 20, PURPLE);
+                        }
                     }
-                    else if (player2.score > player1.score) {
-                        DrawText("PLAYER 2 LEADING!", screenWidth / 2 - 80, 10, 20, RED);
+                    else if (player1.isAlive && !player2.isAlive) {
+                        DrawText("PLAYER 1 WINS BY ELIMINATION!", screenWidth / 2 - 140, screenHeight - 30, 20, BLUE);
                     }
-                    else {
-                        DrawText("TIE!", screenWidth / 2 - 20, 10, 20, PURPLE);
+                    else if (!player1.isAlive && player2.isAlive) {
+                        DrawText("PLAYER 2 WINS BY ELIMINATION!", screenWidth / 2 - 140, screenHeight - 30, 20, RED);
                     }
                 }
                 else {
-                    // Одиночный режим
+                    // Одиночные режимы
                     DrawText("Score:", 10, 10, 30, DARKBLUE);
                     DrawText(TextFormat("%d", player1.score), 120, 10, 30, DARKBLUE);
 
@@ -625,67 +897,34 @@ int main(void) {
 
                     DrawText("Missed:", 10, 90, 20, DARKBLUE);
                     DrawText(TextFormat("%d/10", player1.missedFruits), 120, 90, 20, DARKBLUE);
-                }
 
-                // Game mode name
-                const char* modeName = "";
-                if (gameMode == 1) modeName = "Classic Mode";
-                else if (gameMode == 2) modeName = "Survival Mode";
-                else if (gameMode == 3) modeName = "Time Attack";
-                else if (gameMode == 4) modeName = "Two Players Mode";
-                DrawText(modeName, screenWidth / 2 - 80, 10, 25, DARKBLUE);
+                    if (gameMode == 3) {
+                        DrawText(TextFormat("Time: %d", (int)gameTime), screenWidth - 150, 10, 30, DARKBLUE);
+                    }
 
-                if (gameMode == 3) {
-                    DrawText("Time:", screenWidth - 180, 10, 30, DARKBLUE);
-                    DrawText(TextFormat("%d", (int)gameTime), screenWidth - 80, 10, 30, DARKBLUE);
-                }
-
-                // Отображение активных бонусов
-                int bonusY = 130;
-                if (slowMotionActive) {
-                    DrawText("Slow Motion!", 10, bonusY, 20, BLUE);
-                    bonusY += 25;
-                }
-                if (doublePointsActive) {
-                    DrawText("Double Points!", 10, bonusY, 20, GOLD);
-                    bonusY += 25;
-                }
-                if (speedBoostActive) {
-                    DrawText("Speed Boost!", 10, bonusY, 20, ORANGE);
-                    bonusY += 25;
-                }
-                if (freezeActive) {
-                    DrawText("Freeze!", 10, bonusY, 20, SKYBLUE);
-                    bonusY += 25;
-                }
-
-                // Fruit legend с бонусными фруктами
-                DrawText("Good fruits:", 10, screenHeight - 150, 20, DARKGREEN);
-                DrawRectangle(130, screenHeight - 150, 20, 20, RED);
-                DrawRectangle(160, screenHeight - 150, 20, 20, YELLOW);
-                DrawRectangle(190, screenHeight - 150, 20, 20, GREEN);
-                DrawRectangle(220, screenHeight - 150, 20, 20, PURPLE);
-
-                DrawText("Bad items:", 10, screenHeight - 120, 20, DARKGREEN);
-                DrawRectangle(130, screenHeight - 120, 20, 20, BROWN);
-                DrawRectangle(160, screenHeight - 120, 20, 20, GRAY);
-
-                DrawText("Bonus fruits:", 10, screenHeight - 90, 20, DARKGREEN);
-                DrawRectangle(130, screenHeight - 90, 20, 20, BLUE);
-                DrawRectangle(160, screenHeight - 90, 20, 20, GOLD);
-                DrawRectangle(190, screenHeight - 90, 20, 20, PINK);
-                DrawRectangle(220, screenHeight - 90, 20, 20, MAGENTA);
-                DrawRectangle(250, screenHeight - 90, 20, 20, ORANGE);
-
-                // Управление для двух игроков
-                if (gameMode == 4) {
-                    DrawText("Player 1: A/D keys", 10, screenHeight - 50, 15, BLUE);
-                    DrawText("Player 2: Arrow keys", screenWidth - 150, screenHeight - 50, 15, RED);
+                    // Отображение активных бонусов для одиночных режимов
+                    int bonusY = 130;
+                    if (slowMotionActive) {
+                        DrawText("Slow Motion!", 10, bonusY, 20, BLUE);
+                        bonusY += 25;
+                    }
+                    if (doublePointsActive) {
+                        DrawText("Double Points!", 10, bonusY, 20, GOLD);
+                        bonusY += 25;
+                    }
+                    if (speedBoostActive) {
+                        DrawText("Speed Boost!", 10, bonusY, 20, ORANGE);
+                        bonusY += 25;
+                    }
+                    if (freezeActive) {
+                        DrawText("Freeze!", 10, bonusY, 20, SKYBLUE);
+                        bonusY += 25;
+                    }
                 }
 
             }
             else {
-                // Game over screen - сохраняем рекорд
+                // Game over screen
                 const char* modeName = "";
                 std::string modeStr = "";
 
@@ -706,14 +945,12 @@ int main(void) {
                     modeStr = "Two Players";
                 }
 
-                // Сохраняем рекорд если он лучше предыдущего
                 int totalScore = player1.score;
                 if (gameMode == 4) {
-                    totalScore = player1.score + player2.score; // Суммируем очки обоих игроков
+                    totalScore = player1.score + player2.score;
                 }
                 SavePlayerScore(totalScore, modeStr);
 
-                // Проверяем, побит ли рекорд
                 bool newRecord = false;
                 if (gameMode == 1 && totalScore > playerScores.classicBest) newRecord = true;
                 else if (gameMode == 2 && totalScore > playerScores.survivalBest) newRecord = true;
@@ -727,12 +964,10 @@ int main(void) {
                 }
 
                 if (gameMode == 4) {
-                    // Результаты для двух игроков
                     DrawText(TextFormat("Player 1 Score: %d", player1.score), screenWidth / 2 - 100, 240, 25, BLUE);
                     DrawText(TextFormat("Player 2 Score: %d", player2.score), screenWidth / 2 - 100, 270, 25, RED);
                     DrawText(TextFormat("Total Score: %d", totalScore), screenWidth / 2 - 80, 300, 30, DARKBLUE);
 
-                    // Победитель
                     if (player1.score > player2.score) {
                         DrawText("PLAYER 1 WINS!", screenWidth / 2 - 80, 340, 30, BLUE);
                     }
@@ -760,7 +995,6 @@ int main(void) {
             }
         }
 
-        // Return to menu
         if (IsKeyPressed(KEY_ESCAPE) && !inMenu && !showTopRating) {
             inMenu = true;
             fruits.clear();
