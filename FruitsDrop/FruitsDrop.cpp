@@ -6,8 +6,19 @@
 #include <algorithm>
 #include <fstream>
 
-const int screenWidth = 800;
+const int screenWidth = 800; 
 const int screenHeight = 600;
+int fruitSize;
+Texture2D Fruit0Texture;
+Texture2D Fruit1Texture;
+Texture2D Fruit2Texture;
+Texture2D Fruit3Texture;
+Texture2D Fruit4Texture;
+Texture2D Fruit5Texture;
+Texture2D Fruit6Texture;
+Texture2D Fruit7Texture;
+Texture2D Fruit8Texture;
+Texture2D Fruit9Texture;
 
 // Структура для меню
 struct Button {
@@ -59,11 +70,13 @@ struct Player {
 };
 
 // Global
-int gameMode = 0; // 0: menu, 1: classic, 2: survival, 3: time attack, 4: two players, 5: top rating
+int gameMode = 4; // 0: menu, 1: classic, 2: survival, 3: time attack, 4: two players, 5: top rating, 6: exit
 float gameTime = 120.0f;
 bool gameOver = false;
-bool inMenu = true;
+bool inMenu = false; // Начинаем сразу с игры
 bool showTopRating = false;
+bool gameStarted = false; // Флаг начала игры
+bool fullscreen = true; // Флаг полноэкранного режима
 
 float fruitSpeed = 3.0f;
 float spawnRate = 1.0f;
@@ -117,44 +130,44 @@ void SavePlayerScore(int score, const std::string& mode, int playerNumber = 0) {
 void DrawTopRating() {
     ClearBackground(SKYBLUE);
 
-    DrawText("MY BEST SCORES", screenWidth / 2 - 150, 50, 40, DARKBLUE);
+    DrawText("MY BEST SCORES", GetScreenWidth() / 2 - 150, 50, 40, DARKBLUE);
 
     // Лучшие результаты по режимам
     int startY = 150;
 
     // Classic Mode
-    DrawText("CLASSIC MODE", screenWidth / 2 - 100, startY, 30, GREEN);
-    DrawText("Best Score:", screenWidth / 2 - 150, startY + 40, 25, WHITE);
-    DrawText(TextFormat("%d", playerScores.classicBest), screenWidth / 2 + 50, startY + 40, 25, GOLD);
+    DrawText("CLASSIC MODE", GetScreenWidth() / 2 - 100, startY, 30, GREEN);
+    DrawText("Best Score:", GetScreenWidth() / 2 - 150, startY + 40, 25, WHITE);
+    DrawText(TextFormat("%d", playerScores.classicBest), GetScreenWidth() / 2 + 50, startY + 40, 25, GOLD);
 
     // Survival Mode
-    DrawText("SURVIVAL MODE", screenWidth / 2 - 100, startY + 100, 30, BLUE);
-    DrawText("Best Score:", screenWidth / 2 - 150, startY + 140, 25, WHITE);
-    DrawText(TextFormat("%d", playerScores.survivalBest), screenWidth / 2 + 50, startY + 140, 25, GOLD);
+    DrawText("SURVIVAL MODE", GetScreenWidth() / 2 - 100, startY + 100, 30, BLUE);
+    DrawText("Best Score:", GetScreenWidth() / 2 - 150, startY + 140, 25, WHITE);
+    DrawText(TextFormat("%d", playerScores.survivalBest), GetScreenWidth() / 2 + 50, startY + 140, 25, GOLD);
 
     // Time Attack Mode
-    DrawText("TIME ATTACK MODE", screenWidth / 2 - 120, startY + 200, 30, ORANGE);
-    DrawText("Best Score:", screenWidth / 2 - 150, startY + 240, 25, WHITE);
-    DrawText(TextFormat("%d", playerScores.timeAttackBest), screenWidth / 2 + 50, startY + 240, 25, GOLD);
+    DrawText("TIME ATTACK MODE", GetScreenWidth() / 2 - 120, startY + 200, 30, ORANGE);
+    DrawText("Best Score:", GetScreenWidth() / 2 - 150, startY + 240, 25, WHITE);
+    DrawText(TextFormat("%d", playerScores.timeAttackBest), GetScreenWidth() / 2 + 50, startY + 240, 25, GOLD);
 
     // Two Players Mode - раздельные рекорды
-    DrawText("TWO PLAYERS MODE", screenWidth / 2 - 120, startY + 280, 30, RED);
+    DrawText("TWO PLAYERS MODE", GetScreenWidth() / 2 - 120, startY + 280, 30, RED);
 
     // Player 1 record
-    DrawText("Player 1 Best:", screenWidth / 2 - 150, startY + 320, 25, BLUE);
-    DrawText(TextFormat("%d", playerScores.twoPlayerBestP1), screenWidth / 2 + 50, startY + 320, 25, GOLD);
+    DrawText("Player 1 Best:", GetScreenWidth() / 2 - 150, startY + 320, 25, BLUE);
+    DrawText(TextFormat("%d", playerScores.twoPlayerBestP1), GetScreenWidth() / 2 + 50, startY + 320, 25, GOLD);
 
     // Player 2 record
-    DrawText("Player 2 Best:", screenWidth / 2 - 150, startY + 360, 25, RED);
-    DrawText(TextFormat("%d", playerScores.twoPlayerBestP2), screenWidth / 2 + 50, startY + 360, 25, GOLD);
+    DrawText("Player 2 Best:", GetScreenWidth() / 2 - 150, startY + 360, 25, RED);
+    DrawText(TextFormat("%d", playerScores.twoPlayerBestP2), GetScreenWidth() / 2 + 50, startY + 360, 25, GOLD);
 
     // Статистика
-    DrawText("STATISTICS", screenWidth / 2 - 70, startY + 420, 25, PURPLE);
+    DrawText("STATISTICS", GetScreenWidth() / 2 - 70, startY + 420, 25, PURPLE);
 
     int totalBest = playerScores.classicBest + playerScores.survivalBest + playerScores.timeAttackBest +
         (playerScores.twoPlayerBestP1 > playerScores.twoPlayerBestP2 ? playerScores.twoPlayerBestP1 : playerScores.twoPlayerBestP2);
 
-    DrawText(TextFormat("Total Best: %d", totalBest), screenWidth / 2 - 80, startY + 460, 20, WHITE);
+    DrawText(TextFormat("Total Best: %d", totalBest), GetScreenWidth() / 2 - 80, startY + 460, 20, WHITE);
 
     // Определяем любимый режим
     std::string favoriteMode = "Classic";
@@ -174,9 +187,9 @@ void DrawTopRating() {
         favoriteMode = "Two Players";
     }
 
-    DrawText(TextFormat("Favorite Mode: %s", favoriteMode.c_str()), screenWidth / 2 - 100, startY + 490, 20, WHITE);
+    DrawText(TextFormat("Favorite Mode: %s", favoriteMode.c_str()), GetScreenWidth() / 2 - 100, startY + 490, 20, WHITE);
 
-    DrawText("Press ESC to return", screenWidth / 2 - 100, screenHeight - 50, 20, WHITE);
+    DrawText("Press ESC to return", GetScreenWidth() / 2 - 100, GetScreenHeight() - 50, 20, WHITE);
 }
 
 void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
@@ -225,16 +238,16 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
     if (gameMode == 4) {
         if (playerSide == 1) { // Player 1 - левая сторона
             if (rec.x < 0) rec.x = 0;
-            if (rec.x + rec.width > screenWidth / 2) rec.x = screenWidth / 2 - rec.width;
+            if (rec.x + rec.width > GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2 - rec.width;
         }
         else if (playerSide == 2) { // Player 2 - правая сторона
-            if (rec.x < screenWidth / 2) rec.x = screenWidth / 2;
-            if (rec.x + rec.width > screenWidth) rec.x = screenWidth - rec.width;
+            if (rec.x < GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2;
+            if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
         }
     }
     else {
         // Обычные ограничения для одиночных режимов
-        if (rec.x + rec.width > screenWidth) rec.x = screenWidth - rec.width;
+        if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
         if (rec.x < 0) rec.x = 0;
     }
 }
@@ -242,15 +255,14 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
 Fruit CreateFruit(int playerSide = 0) {
     Fruit fruit;
 
-    // Определяем позицию в зависимости от стороны игрока
     if (playerSide == 1) { // Для игрока 1 (левая сторона)
-        fruit.rect = { (float)GetRandomValue(50, screenWidth / 2 - 100), -50, 40, 40 };
+        fruit.rect = { (float)GetRandomValue(50, GetScreenWidth() / 2 - 100), -50, (float)fruitSize, (float)fruitSize };
     }
     else if (playerSide == 2) { // Для игрока 2 (правая сторона)
-        fruit.rect = { (float)GetRandomValue(screenWidth / 2 + 50, screenWidth - 100), -50, 40, 40 };
+        fruit.rect = { (float)GetRandomValue(GetScreenWidth() / 2 + 50, GetScreenWidth() - 100), -50, (float)fruitSize, (float)fruitSize };
     }
     else { // Для одиночных режимов
-        fruit.rect = { (float)GetRandomValue(50, screenWidth - 100), -50, 40, 40 };
+        fruit.rect = { (float)GetRandomValue(50, GetScreenWidth() - 100), -50, (float)fruitSize, (float)fruitSize };
     }
 
     // Определяем тип фрукта с учетом режима игры
@@ -297,7 +309,7 @@ Fruit CreateFruit(int playerSide = 0) {
         if (freezeActive) baseSpeed = 0.5f;
     }
 
-    fruit.speed = baseSpeed;
+    fruit.speed = baseSpeed * GetScreenHeight() / 1080.0f; // Масштабируем скорость под разрешение
 
     // Цвета и длительность эффектов
     switch (fruit.type) {
@@ -490,10 +502,10 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
 
             if (gameMode == 4) {
                 // В режиме двух игроков учитываем индивидуальные эффекты заморозки
-                if (fruit.rect.x < screenWidth / 2 && player1.bonuses.freezeActive) {
+                if (fruit.rect.x < GetScreenWidth() / 2 && player1.bonuses.freezeActive) {
                     currentSpeed = 0.5f;
                 }
-                else if (fruit.rect.x >= screenWidth / 2 && player2.bonuses.freezeActive) {
+                else if (fruit.rect.x >= GetScreenWidth() / 2 && player2.bonuses.freezeActive) {
                     currentSpeed = 0.5f;
                 }
             }
@@ -570,17 +582,17 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
             }
 
             // Проверка пропущенных фруктов
-            if (fruit.rect.y > screenHeight) {
+            if (fruit.rect.y > GetScreenHeight()) {
                 if (fruit.type <= 3) { // Только хорошие фрукты считаются как пропущенные
                     if (gameMode == 4) {
                         // Определяем, какой игрок пропустил фрукт
-                        if (fruit.rect.x < screenWidth / 2 && player1.isAlive) {
+                        if (fruit.rect.x < GetScreenWidth() / 2 && player1.isAlive) {
                             player1.missedFruits++;
                             if (player1.missedFruits >= 10) {
                                 player1.isAlive = false;
                             }
                         }
-                        else if (fruit.rect.x >= screenWidth / 2 && player2.isAlive) {
+                        else if (fruit.rect.x >= GetScreenWidth() / 2 && player2.isAlive) {
                             player2.missedFruits++;
                             if (player2.missedFruits >= 10) {
                                 player2.isAlive = false;
@@ -608,7 +620,41 @@ void DrawFruits(const std::vector<Fruit>& fruits) {
     for (const auto& fruit : fruits) {
         if (fruit.active) {
             DrawRectangleRec(fruit.rect, fruit.color);
-
+            switch (fruit.type)
+            {
+            case 0:
+                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 1:
+                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 2:
+                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 3:
+                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 4:
+                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 5:
+                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 6:
+                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 7:
+                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 8:
+                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 9:
+                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            default:
+                break;
+            }
             // Специальные узоры для бонусных фруктов
             if (fruit.type >= 6) {
                 DrawRectangle(fruit.rect.x + 15, fruit.rect.y + 5, 10, 30, WHITE);
@@ -623,9 +669,13 @@ void ResetGame() {
     gameTime = 120.0f;
     fruitSpeed = 3.0f;
     spawnRate = 1.0f;
+    gameStarted = false; // Игра не начата до нажатия SPACE
 
-    // Инициализация игроков
-    player1.basket = { screenWidth / 4 - 50, screenHeight - 100, 100, 60 };
+    // Инициализация игроков с масштабированием под разрешение
+    int basketWidth = 100 * GetScreenWidth() / 1920;
+    int basketHeight = 60 * GetScreenHeight() / 1080;
+
+    player1.basket = { GetScreenWidth() / 4.0f - basketWidth / 2, GetScreenHeight() - 100.0f, (float)basketWidth, (float)basketHeight };
     player1.score = 0;
     player1.lives = 3;
     player1.missedFruits = 0;
@@ -635,7 +685,7 @@ void ResetGame() {
     // Сброс бонусов игрока 1
     player1.bonuses = PlayerBonusEffects();
 
-    player2.basket = { 3 * screenWidth / 4 - 50, screenHeight - 100, 100, 60 };
+    player2.basket = { 3 * GetScreenWidth() / 4.0f - basketWidth / 2, GetScreenHeight() - 100.0f, (float)basketWidth, (float)basketHeight };
     player2.score = 0;
     player2.lives = 3;
     player2.missedFruits = 0;
@@ -659,15 +709,19 @@ void ResetGame() {
 void DrawMenu() {
     ClearBackground(SKYBLUE);
 
-    DrawText("FruityDrop", screenWidth / 2 - 100, 80, 40, DARKBLUE);
+    DrawText("FruityDrop", GetScreenWidth() / 2 - 100, 80, 40, DARKBLUE);
 
     // Menu buttons
-    Rectangle classicBtn = { screenWidth / 2 - 100, 180, 200, 50 };
-    Rectangle survivalBtn = { screenWidth / 2 - 100, 250, 200, 50 };
-    Rectangle timeBtn = { screenWidth / 2 - 100, 320, 200, 50 };
-    Rectangle twoPlayerBtn = { screenWidth / 2 - 100, 390, 200, 50 };
-    Rectangle ratingBtn = { screenWidth / 2 - 100, 460, 200, 50 };
-    Rectangle exitBtn = { screenWidth / 2 - 100, 530, 200, 50 };
+    int buttonWidth = 200 * GetScreenWidth() / 1920;
+    int buttonHeight = 50 * GetScreenHeight() / 1080;
+    int buttonSpacing = 70 * GetScreenHeight() / 1080;
+
+    Rectangle classicBtn = { GetScreenWidth() / 2.0f - buttonWidth / 2, 180, (float)buttonWidth, (float)buttonHeight };
+    Rectangle survivalBtn = { GetScreenWidth() / 2.0f - buttonWidth / 2, 180 + buttonSpacing, (float)buttonWidth, (float)buttonHeight };
+    Rectangle timeBtn = { GetScreenWidth() / 2.0f - buttonWidth / 2, 180 + 2 * buttonSpacing, (float)buttonWidth, (float)buttonHeight };
+    Rectangle twoPlayerBtn = { GetScreenWidth() / 2.0f - buttonWidth / 2, 180 + 3 * buttonSpacing, (float)buttonWidth, (float)buttonHeight };
+    Rectangle ratingBtn = { GetScreenWidth() / 2.0f - buttonWidth / 2, 180 + 4 * buttonSpacing, (float)buttonWidth, (float)buttonHeight };
+    Rectangle exitBtn = { GetScreenWidth() / 2.0f - buttonWidth / 2, 180 + 5 * buttonSpacing, (float)buttonWidth, (float)buttonHeight };
 
     DrawRectangleRec(classicBtn, GREEN);
     DrawRectangleRec(survivalBtn, BLUE);
@@ -676,12 +730,14 @@ void DrawMenu() {
     DrawRectangleRec(ratingBtn, DARKPURPLE);
     DrawRectangleRec(exitBtn, RED);
 
-    DrawText("Classic", classicBtn.x + 60, classicBtn.y + 15, 20, WHITE);
-    DrawText("Survival", survivalBtn.x + 50, survivalBtn.y + 15, 20, WHITE);
-    DrawText("Time Attack", timeBtn.x + 35, timeBtn.y + 15, 20, WHITE);
-    DrawText("2 Players", twoPlayerBtn.x + 50, twoPlayerBtn.y + 15, 20, WHITE);
-    DrawText("My Scores", ratingBtn.x + 50, ratingBtn.y + 15, 20, WHITE);
-    DrawText("Exit", exitBtn.x + 75, exitBtn.y + 15, 20, WHITE);
+    int fontSize = 20 * GetScreenWidth() / 1920;
+
+    DrawText("Classic", classicBtn.x + 60, classicBtn.y + 15, fontSize, WHITE);
+    DrawText("Survival", survivalBtn.x + 50, survivalBtn.y + 15, fontSize, WHITE);
+    DrawText("Time Attack", timeBtn.x + 35, timeBtn.y + 15, fontSize, WHITE);
+    DrawText("2 Players", twoPlayerBtn.x + 50, twoPlayerBtn.y + 15, fontSize, WHITE);
+    DrawText("My Scores", ratingBtn.x + 50, ratingBtn.y + 15, fontSize, WHITE);
+    DrawText("Exit", exitBtn.x + 75, exitBtn.y + 15, fontSize, WHITE);
 
     // Handle clicks 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -710,20 +766,94 @@ void DrawMenu() {
             showTopRating = true;
         }
         if (CheckCollisionPointRec(mousePoint, exitBtn)) {
-            // Выход из игры
-            return;
+            gameMode = 6; // Выход из игры
         }
     }
 }
 
+void ToggleFullscreen() {
+    if (fullscreen) {
+        SetWindowSize(screenWidth, screenHeight);
+        ToggleFullscreen();
+        fullscreen = false;
+    }
+    else {
+        int monitor = GetCurrentMonitor();
+        int monitorWidth = GetMonitorWidth(monitor);
+        int monitorHeight = GetMonitorHeight(monitor);
+        SetWindowSize(monitorWidth, monitorHeight);
+        ToggleFullscreen();
+        fullscreen = true;
+    }
+}
 int main(void) {
-    InitWindow(screenWidth, screenHeight, "FruityDrop");
+    // Получаем размеры монитора для полноэкранного режима
+    int monitor = GetCurrentMonitor();
+    int monitorWidth = GetMonitorWidth(monitor);
+    int monitorHeight = GetMonitorHeight(monitor);
+
+    InitWindow(0, 0, "FruityDrop");
     SetTargetFPS(60);
 
     LoadPlayerScores();
+    ResetGame(); // Автоматически запускаем режим 2 Players
     std::vector<Fruit> fruits;
 
+    fruitSize= 40 * GetScreenWidth() / 1920; 
+
+    Image image = LoadImage("Яблоко.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit0Texture = LoadTextureFromImage(image);
+
+    image = LoadImage("апельсин.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit1Texture = LoadTextureFromImage(image);
+    
+    image = LoadImage("арбуз.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit2Texture = LoadTextureFromImage(image);
+    
+    image = LoadImage("груша.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit3Texture = LoadTextureFromImage(image);
+    
+    image = LoadImage("кожура.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit4Texture = LoadTextureFromImage(image);
+    
+    image = LoadImage("огрызок.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit5Texture = LoadTextureFromImage(image);
+    
+    image = LoadImage("Банан.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit6Texture = LoadTextureFromImage(image);
+    
+    image = LoadImage("вишня.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit7Texture = LoadTextureFromImage(image);
+    
+    image = LoadImage("Золотое яблоко.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit8Texture = LoadTextureFromImage(image);
+    
+    image = LoadImage("Золотой арбуз.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit9Texture = LoadTextureFromImage(image);
+
+    UnloadImage(image);
+
     while (!WindowShouldClose()) {
+        // Проверка на выход из игры
+        if (gameMode == 6) {
+            break;
+        }
+
+        // Переключение полноэкранного режима по F11
+        if (IsKeyPressed(KEY_F11)) {
+            ToggleFullscreen();
+        }
+
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
@@ -744,6 +874,44 @@ int main(void) {
 
         // Игровой процесс
         if (!gameOver) {
+            // Экран начала игры
+            if (!gameStarted) {
+                ClearBackground(SKYBLUE);
+
+                // Рисуем разделенный экран
+                DrawRectangle(0, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(SKYBLUE, 0.1f));
+                DrawRectangle(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(LIGHTGRAY, 0.1f));
+                DrawLine(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), DARKGRAY);
+
+                // Рисуем корзины
+                DrawRectangleRec(player1.basket, player1.color);
+
+                DrawRectangleRec(player2.basket, player2.color);
+
+                // Информация об игроках
+                int instructionFontSize = 25 * GetScreenWidth() / 1920;
+                DrawText("PLAYER 1", 20, 10, instructionFontSize, BLUE);
+                DrawText("A/D keys to move", 20, 40, instructionFontSize - 5, DARKBLUE);
+
+                DrawText("PLAYER 2", GetScreenWidth() - 150, 10, instructionFontSize, RED);
+                DrawText("Arrow keys to move", GetScreenWidth() - 180, 40, instructionFontSize - 5, DARKBLUE);
+
+                // Инструкция
+                DrawText("TWO PLAYERS MODE", GetScreenWidth() / 2 - 120, GetScreenHeight() / 2 - 60, instructionFontSize + 5, PURPLE);
+                DrawText("Catch good fruits, avoid bad ones!", GetScreenWidth() / 2 - 180, GetScreenHeight() / 2 - 20, instructionFontSize, DARKBLUE);
+                DrawText("Collect bonus fruits for special effects!", GetScreenWidth() / 2 - 200, GetScreenHeight() / 2 + 10, instructionFontSize, DARKBLUE);
+                DrawText("Press SPACE to start the game!", GetScreenWidth() / 2 - 160, GetScreenHeight() / 2 + 50, instructionFontSize + 5, GREEN);
+
+                // Ожидание нажатия SPACE
+                if (IsKeyPressed(KEY_SPACE)) {
+                    gameStarted = true;
+                }
+
+                EndDrawing();
+                continue;
+            }
+
+            // Основной игровой процесс
             UpdateBonusEffects();
 
             // Controls - только для живых игроков
@@ -810,11 +978,11 @@ int main(void) {
             // Drawing
             if (gameMode == 4) {
                 // Разделенный экран для двух игроков
-                DrawRectangle(0, 0, screenWidth / 2, screenHeight, Fade(SKYBLUE, 0.1f));
-                DrawRectangle(screenWidth / 2, 0, screenWidth / 2, screenHeight, Fade(LIGHTGRAY, 0.1f));
+                DrawRectangle(0, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(SKYBLUE, 0.1f));
+                DrawRectangle(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(LIGHTGRAY, 0.1f));
 
                 // Разделительная линия
-                DrawLine(screenWidth / 2, 0, screenWidth / 2, screenHeight, DARKGRAY);
+                DrawLine(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), DARKGRAY);
 
                 // Рисуем корзины только живых игроков
                 if (player1.isAlive) DrawRectangleRec(player1.basket, player1.color);
@@ -827,23 +995,26 @@ int main(void) {
             DrawFruits(fruits);
 
             // UI
+            int uiFontSize = 25 * GetScreenWidth() / 1920;
+            int smallFontSize = 20 * GetScreenWidth() / 1920;
+
             if (gameMode == 4) {
                 // Player 1 UI (левая сторона - слева)
-                DrawText("PLAYER 1", 20, 10, 25, BLUE);
-                DrawText(TextFormat("Score: %d", player1.score), 20, 40, 20, DARKBLUE);
-                DrawText(TextFormat("Lives: %d", player1.lives), 20, 65, 20, player1.isAlive ? RED : GRAY);
-                DrawText(TextFormat("Missed: %d/10", player1.missedFruits), 20, 90, 20, DARKBLUE);
-                if (!player1.isAlive) DrawText("ELIMINATED!", 20, 115, 15, RED);
+                DrawText("PLAYER 1", 20, 10, uiFontSize, BLUE);
+                DrawText(TextFormat("Score: %d", player1.score), 20, 40, smallFontSize, DARKBLUE);
+                DrawText(TextFormat("Lives: %d", player1.lives), 20, 65, smallFontSize, player1.isAlive ? RED : GRAY);
+                DrawText(TextFormat("Missed: %d/10", player1.missedFruits), 20, 90, smallFontSize, DARKBLUE);
+                if (!player1.isAlive) DrawText("ELIMINATED!", 20, 115, smallFontSize - 5, RED);
 
                 // Player 2 UI (правая сторона - справа)
-                DrawText("PLAYER 2", screenWidth - 150, 10, 25, RED);
-                DrawText(TextFormat("Score: %d", player2.score), screenWidth - 150, 40, 20, DARKBLUE);
-                DrawText(TextFormat("Lives: %d", player2.lives), screenWidth - 150, 65, 20, player2.isAlive ? RED : GRAY);
-                DrawText(TextFormat("Missed: %d/10", player2.missedFruits), screenWidth - 150, 90, 20, DARKBLUE);
-                if (!player2.isAlive) DrawText("ELIMINATED!", screenWidth - 150, 115, 15, RED);
+                DrawText("PLAYER 2", GetScreenWidth() - 150, 10, uiFontSize, RED);
+                DrawText(TextFormat("Score: %d", player2.score), GetScreenWidth() - 150, 40, smallFontSize, DARKBLUE);
+                DrawText(TextFormat("Lives: %d", player2.lives), GetScreenWidth() - 150, 65, smallFontSize, player2.isAlive ? RED : GRAY);
+                DrawText(TextFormat("Missed: %d/10", player2.missedFruits), GetScreenWidth() - 150, 90, smallFontSize, DARKBLUE);
+                if (!player2.isAlive) DrawText("ELIMINATED!", GetScreenWidth() - 150, 115, smallFontSize - 5, RED);
 
                 // Таймер по центру
-                DrawText(TextFormat("Time: %d", (int)gameTime), screenWidth / 2 - 40, 10, 25, DARKBLUE);
+                DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() / 2 - 40, 10, uiFontSize, DARKBLUE);
 
                 // Отображение активных бонусов для каждого живого игрока
                 int bonusY1 = 140;
@@ -852,19 +1023,19 @@ int main(void) {
                 // Бонусы Player 1 (слева)
                 if (player1.isAlive) {
                     if (player1.bonuses.slowMotionActive) {
-                        DrawText("Slow Motion!", 20, bonusY1, 15, BLUE);
+                        DrawText("Slow Motion!", 20, bonusY1, smallFontSize - 5, BLUE);
                         bonusY1 += 20;
                     }
                     if (player1.bonuses.doublePointsActive) {
-                        DrawText("Double Points!", 20, bonusY1, 15, GOLD);
+                        DrawText("Double Points!", 20, bonusY1, smallFontSize - 5, GOLD);
                         bonusY1 += 20;
                     }
                     if (player1.bonuses.speedBoostActive) {
-                        DrawText("Speed Boost!", 20, bonusY1, 15, ORANGE);
+                        DrawText("Speed Boost!", 20, bonusY1, smallFontSize - 5, ORANGE);
                         bonusY1 += 20;
                     }
                     if (player1.bonuses.freezeActive) {
-                        DrawText("Freeze!", 20, bonusY1, 15, SKYBLUE);
+                        DrawText("Freeze!", 20, bonusY1, smallFontSize - 5, SKYBLUE);
                         bonusY1 += 20;
                     }
                 }
@@ -872,19 +1043,19 @@ int main(void) {
                 // Бонусы Player 2 (справа)
                 if (player2.isAlive) {
                     if (player2.bonuses.slowMotionActive) {
-                        DrawText("Slow Motion!", screenWidth - 150, bonusY2, 15, BLUE);
+                        DrawText("Slow Motion!", GetScreenWidth() - 150, bonusY2, smallFontSize - 5, BLUE);
                         bonusY2 += 20;
                     }
                     if (player2.bonuses.doublePointsActive) {
-                        DrawText("Double Points!", screenWidth - 150, bonusY2, 15, GOLD);
+                        DrawText("Double Points!", GetScreenWidth() - 150, bonusY2, smallFontSize - 5, GOLD);
                         bonusY2 += 20;
                     }
                     if (player2.bonuses.speedBoostActive) {
-                        DrawText("Speed Boost!", screenWidth - 150, bonusY2, 15, ORANGE);
+                        DrawText("Speed Boost!", GetScreenWidth() - 150, bonusY2, smallFontSize - 5, ORANGE);
                         bonusY2 += 20;
                     }
                     if (player2.bonuses.freezeActive) {
-                        DrawText("Freeze!", screenWidth - 150, bonusY2, 15, SKYBLUE);
+                        DrawText("Freeze!", GetScreenWidth() - 150, bonusY2, smallFontSize - 5, SKYBLUE);
                         bonusY2 += 20;
                     }
                 }
@@ -892,53 +1063,53 @@ int main(void) {
                 // Отображение лидера
                 if (player1.isAlive && player2.isAlive) {
                     if (player1.score > player2.score) {
-                        DrawText("PLAYER 1 LEADING!", screenWidth / 2 - 80, screenHeight - 30, 20, BLUE);
+                        DrawText("PLAYER 1 LEADING!", GetScreenWidth() / 2 - 80, GetScreenHeight() - 30, smallFontSize, BLUE);
                     }
                     else if (player2.score > player1.score) {
-                        DrawText("PLAYER 2 LEADING!", screenWidth / 2 - 80, screenHeight - 30, 20, RED);
+                        DrawText("PLAYER 2 LEADING!", GetScreenWidth() / 2 - 80, GetScreenHeight() - 30, smallFontSize, RED);
                     }
                     else {
-                        DrawText("TIE!", screenWidth / 2 - 20, screenHeight - 30, 20, PURPLE);
+                        DrawText("TIE!", GetScreenWidth() / 2 - 20, GetScreenHeight() - 30, smallFontSize, PURPLE);
                     }
                 }
                 else if (player1.isAlive && !player2.isAlive) {
-                    DrawText("PLAYER 1 WINS BY ELIMINATION!", screenWidth / 2 - 140, screenHeight - 30, 20, BLUE);
+                    DrawText("PLAYER 1 WINS BY ELIMINATION!", GetScreenWidth() / 2 - 140, GetScreenHeight() - 30, smallFontSize, BLUE);
                 }
                 else if (!player1.isAlive && player2.isAlive) {
-                    DrawText("PLAYER 2 WINS BY ELIMINATION!", screenWidth / 2 - 140, screenHeight - 30, 20, RED);
+                    DrawText("PLAYER 2 WINS BY ELIMINATION!", GetScreenWidth() / 2 - 140, GetScreenHeight() - 30, smallFontSize, RED);
                 }
             }
             else {
                 // Одиночные режимы
-                DrawText("Score:", 10, 10, 30, DARKBLUE);
-                DrawText(TextFormat("%d", player1.score), 120, 10, 30, DARKBLUE);
+                DrawText("Score:", 10, 10, uiFontSize, DARKBLUE);
+                DrawText(TextFormat("%d", player1.score), 120, 10, uiFontSize, DARKBLUE);
 
-                DrawText("Lives:", 10, 50, 30, DARKBLUE);
-                DrawText(TextFormat("%d", player1.lives), 120, 50, 30, RED);
+                DrawText("Lives:", 10, 50, uiFontSize, DARKBLUE);
+                DrawText(TextFormat("%d", player1.lives), 120, 50, uiFontSize, RED);
 
-                DrawText("Missed:", 10, 90, 20, DARKBLUE);
-                DrawText(TextFormat("%d/10", player1.missedFruits), 120, 90, 20, DARKBLUE);
+                DrawText("Missed:", 10, 90, smallFontSize, DARKBLUE);
+                DrawText(TextFormat("%d/10", player1.missedFruits), 120, 90, smallFontSize, DARKBLUE);
 
                 if (gameMode == 3) {
-                    DrawText(TextFormat("Time: %d", (int)gameTime), screenWidth - 150, 10, 30, DARKBLUE);
+                    DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() - 150, 10, uiFontSize, DARKBLUE);
                 }
 
                 // Отображение активных бонусов для одиночных режимов
                 int bonusY = 130;
                 if (slowMotionActive) {
-                    DrawText("Slow Motion!", 10, bonusY, 20, BLUE);
+                    DrawText("Slow Motion!", 10, bonusY, smallFontSize, BLUE);
                     bonusY += 25;
                 }
                 if (doublePointsActive) {
-                    DrawText("Double Points!", 10, bonusY, 20, GOLD);
+                    DrawText("Double Points!", 10, bonusY, smallFontSize, GOLD);
                     bonusY += 25;
                 }
                 if (speedBoostActive) {
-                    DrawText("Speed Boost!", 10, bonusY, 20, ORANGE);
+                    DrawText("Speed Boost!", 10, bonusY, smallFontSize, ORANGE);
                     bonusY += 25;
                 }
                 if (freezeActive) {
-                    DrawText("Freeze!", 10, bonusY, 20, SKYBLUE);
+                    DrawText("Freeze!", 10, bonusY, smallFontSize, SKYBLUE);
                     bonusY += 25;
                 }
             }
@@ -985,38 +1156,43 @@ int main(void) {
                 else if (gameMode == 3 && player1.score > playerScores.timeAttackBest) newRecord1 = true;
             }
 
-            DrawText("Game Over!", screenWidth / 2 - 80, 150, 40, RED);
+            int gameOverFontSize = 40 * GetScreenWidth() / 1920;
+            int resultFontSize = 30 * GetScreenWidth() / 1920;
+            int smallResultFontSize = 25 * GetScreenWidth() / 1920;
+
+            DrawText("Game Over!", GetScreenWidth() / 2 - 80, 150, gameOverFontSize, RED);
 
             if (newRecord1) {
-                DrawText("PLAYER 1 NEW RECORD!", screenWidth / 2 - 100, 190, 25, GOLD);
+                DrawText("PLAYER 1 NEW RECORD!", GetScreenWidth() / 2 - 100, 190, smallResultFontSize, GOLD);
             }
             if (newRecord2) {
-                DrawText("PLAYER 2 NEW RECORD!", screenWidth / 2 - 100, 220, 25, GOLD);
+                DrawText("PLAYER 2 NEW RECORD!", GetScreenWidth() / 2 - 100, 220, smallResultFontSize, GOLD);
             }
 
             if (gameMode == 4) {
-                DrawText(TextFormat("Player 1 Score: %d", player1.score), screenWidth / 2 - 100, 260, 25, BLUE);
-                DrawText(TextFormat("Player 2 Score: %d", player2.score), screenWidth / 2 - 100, 290, 25, RED);
+                DrawText(TextFormat("Player 1 Score: %d", player1.score), GetScreenWidth() / 2 - 100, 260, smallResultFontSize, BLUE);
+                DrawText(TextFormat("Player 2 Score: %d", player2.score), GetScreenWidth() / 2 - 100, 290, smallResultFontSize, RED);
 
                 if (player1.score > player2.score) {
-                    DrawText("PLAYER 1 WINS!", screenWidth / 2 - 80, 330, 30, BLUE);
+                    DrawText("PLAYER 1 WINS!", GetScreenWidth() / 2 - 80, 330, resultFontSize, BLUE);
                 }
                 else if (player2.score > player1.score) {
-                    DrawText("PLAYER 2 WINS!", screenWidth / 2 - 80, 330, 30, RED);
+                    DrawText("PLAYER 2 WINS!", GetScreenWidth() / 2 - 80, 330, resultFontSize, RED);
                 }
                 else {
-                    DrawText("DRAW!", screenWidth / 2 - 40, 330, 30, PURPLE);
+                    DrawText("DRAW!", GetScreenWidth() / 2 - 40, 330, resultFontSize, PURPLE);
                 }
             }
             else {
-                DrawText(TextFormat("Final Score: %d", player1.score), screenWidth / 2 - 70, 260, 30, DARKBLUE);
+                DrawText(TextFormat("Final Score: %d", player1.score), GetScreenWidth() / 2 - 70, 260, resultFontSize, DARKBLUE);
             }
 
-            DrawText("Press SPACE for menu", screenWidth / 2 - 100, 390, 20, DARKBLUE);
-            DrawText("Press R for Records", screenWidth / 2 - 100, 420, 20, DARKBLUE);
+            DrawText("Press SPACE for menu", GetScreenWidth() / 2 - 100, 390, smallResultFontSize - 5, DARKBLUE);
+            DrawText("Press R for Records", GetScreenWidth() / 2 - 100, 420, smallResultFontSize - 5, DARKBLUE);
 
             if (IsKeyPressed(KEY_SPACE)) {
                 inMenu = true;
+                gameMode = 0; // Возврат в меню
                 fruits.clear();
             }
             if (IsKeyPressed(KEY_R)) {
@@ -1024,10 +1200,11 @@ int main(void) {
             }
         }
 
-        // Возврат в меню по ESC 
+        // Возврат в меню по ESC
         if (IsKeyPressed(KEY_ESCAPE)) {
             if (!inMenu && !showTopRating) {
                 inMenu = true;
+                gameMode = 0; // Возврат в меню
                 fruits.clear();
             }
             else if (showTopRating) {
@@ -1037,7 +1214,16 @@ int main(void) {
 
         EndDrawing();
     }
-
+    UnloadTexture(Fruit0Texture);
+    UnloadTexture(Fruit1Texture);
+    UnloadTexture(Fruit2Texture);
+    UnloadTexture(Fruit3Texture);
+    UnloadTexture(Fruit4Texture);
+    UnloadTexture(Fruit5Texture);
+    UnloadTexture(Fruit6Texture);
+    UnloadTexture(Fruit7Texture);
+    UnloadTexture(Fruit8Texture);
+    UnloadTexture(Fruit9Texture);
     CloseWindow();
     return 0;
 }
