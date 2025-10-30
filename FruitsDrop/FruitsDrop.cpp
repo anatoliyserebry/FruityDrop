@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <fstream>
 
-const int screenWidth = 800; 
+const int screenWidth = 800;
 const int screenHeight = 600;
 int fruitSize;
 Texture2D Fruit0Texture;
@@ -19,7 +19,7 @@ Texture2D Fruit6Texture;
 Texture2D Fruit7Texture;
 Texture2D Fruit8Texture;
 Texture2D Fruit9Texture;
-Texture2D Fruit10Texture; 
+Texture2D Fruit10Texture;
 
 // Структура для меню
 struct Button {
@@ -70,6 +70,13 @@ struct Player {
     bool isAlive;
 };
 
+// Структура для геймпада
+struct GamepadController {
+    int gamepadNumber;
+    bool connected;
+    bool useLeftStick; // true - левый стик, false - правый стик
+};
+
 // Global
 int gameMode = 4; // 0: menu, 1: classic, 2: survival, 3: time attack, 4: two players, 5: top rating, 6: exit
 float gameTime = 120.0f;
@@ -98,6 +105,103 @@ PlayerBestScores playerScores;
 
 // Для двух игроков
 Player player1, player2;
+
+// Для геймпадов
+GamepadController gamepad1 = { 0, false, true }; // Геймпад 1 (игрок 1)
+GamepadController gamepad2 = { 1, false, true }; // Геймпад 2 (игрок 2)
+
+// Функции для работы с геймпадами
+void CheckGamepads() {
+    // Проверяем подключение геймпадов
+    gamepad1.connected = IsGamepadAvailable(gamepad1.gamepadNumber);
+    gamepad2.connected = IsGamepadAvailable(gamepad2.gamepadNumber);
+
+    if (gamepad1.connected) {
+        // Проверяем кнопки для переключения стиков
+        if (IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {
+            gamepad1.useLeftStick = !gamepad1.useLeftStick;
+        }
+    }
+
+    if (gamepad2.connected) {
+        if (IsGamepadButtonPressed(gamepad2.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {
+            gamepad2.useLeftStick = !gamepad2.useLeftStick;
+        }
+    }
+}
+
+void MoveRectangleWithGamepad(Rectangle& rec, GamepadController& gamepad, int playerSide = 0) {
+    if (!gamepad.connected) return;
+
+    float moveSpeed = 20.0f;
+    Vector2 stickAxis = { 0, 0 };
+
+    // Получаем данные со стика в зависимости от настройки
+    if (gamepad.useLeftStick) {
+        stickAxis.x = GetGamepadAxisMovement(gamepad.gamepadNumber, GAMEPAD_AXIS_LEFT_X);
+    }
+    else {
+        stickAxis.x = GetGamepadAxisMovement(gamepad.gamepadNumber, GAMEPAD_AXIS_RIGHT_X);
+    }
+
+    // Движение с учетом мертвой зоны
+    if (fabs(stickAxis.x) > 0.2f) {
+        rec.x += stickAxis.x * moveSpeed;
+    }
+
+    // Также поддерживаем кнопки D-pad для точного управления
+    if (IsGamepadButtonDown(gamepad.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) {
+        rec.x -= moveSpeed;
+    }
+    if (IsGamepadButtonDown(gamepad.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {
+        rec.x += moveSpeed;
+    }
+
+    // Ограничения для разделенного экрана в режиме двух игроков
+    if (gameMode == 4) {
+        if (playerSide == 1) { // Player 1 - левая сторона
+            if (rec.x < 0) rec.x = 0;
+            if (rec.x + rec.width > GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2 - rec.width;
+        }
+        else if (playerSide == 2) { // Player 2 - правая сторона
+            if (rec.x < GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2;
+            if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
+        }
+    }
+    else {
+        // Обычные ограничения для одиночных режимов
+        if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
+        if (rec.x < 0) rec.x = 0;
+    }
+}
+
+void DrawGamepadInfo() {
+    if (gameMode == 4) {
+        int infoFontSize = 18 * GetScreenWidth() / 1920;
+
+        // Информация о геймпаде игрока 1
+        if (gamepad1.connected) {
+            DrawText("Gamepad 1: Connected", 20, GetScreenHeight() - 60, infoFontSize, GREEN);
+            DrawText(TextFormat("Stick: %s", gamepad1.useLeftStick ? "LEFT" : "RIGHT"), 20, GetScreenHeight() - 40, infoFontSize - 2, WHITE);
+            DrawText("Press X to switch", 20, GetScreenHeight() - 20, infoFontSize - 2, YELLOW);
+        }
+        else {
+            DrawText("Gamepad 1: Not Connected", 20, GetScreenHeight() - 40, infoFontSize, RED);
+            DrawText("Use A/D keys", 20, GetScreenHeight() - 20, infoFontSize - 2, WHITE);
+        }
+
+        // Информация о геймпаде игрока 2
+        if (gamepad2.connected) {
+            DrawText("Gamepad 2: Connected", GetScreenWidth() - 200, GetScreenHeight() - 60, infoFontSize, GREEN);
+            DrawText(TextFormat("Stick: %s", gamepad2.useLeftStick ? "LEFT" : "RIGHT"), GetScreenWidth() - 200, GetScreenHeight() - 40, infoFontSize - 2, WHITE);
+            DrawText("Press X to switch", GetScreenWidth() - 200, GetScreenHeight() - 20, infoFontSize - 2, YELLOW);
+        }
+        else {
+            DrawText("Gamepad 2: Not Connected", GetScreenWidth() - 200, GetScreenHeight() - 40, infoFontSize, RED);
+            DrawText("Use Arrow keys", GetScreenWidth() - 200, GetScreenHeight() - 20, infoFontSize - 2, WHITE);
+        }
+    }
+}
 
 // Для работы с рекордами
 void LoadPlayerScores() {
@@ -228,6 +332,7 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
         }
     }
 
+    // Управление с клавиатуры (как резерв)
     if ((useArrowKeys && IsKeyDown(KEY_LEFT)) || (!useArrowKeys && IsKeyDown(KEY_A))) {
         rec.x -= moveSpeed;
     }
@@ -252,6 +357,8 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
         if (rec.x < 0) rec.x = 0;
     }
 }
+
+// ... остальной код остается таким же, включая CreateFruit, UpdateBonusEffects, ApplyBonusEffect, UpdateFruits, DrawFruits, ResetGame, DrawMenu, ToggleFullscreen ...
 
 Fruit CreateFruit(int playerSide = 0) {
     Fruit fruit;
@@ -659,9 +766,9 @@ void DrawFruits(const std::vector<Fruit>& fruits) {
             default:
                 break;
             }
-            
+
             if (fruit.type >= 6) {
-                
+
             }
         }
     }
@@ -789,6 +896,7 @@ void ToggleFullscreen() {
         fullscreen = true;
     }
 }
+
 int main(void) {
     // Получаем размеры монитора для полноэкранного режима
     int monitor = GetCurrentMonitor();
@@ -802,7 +910,7 @@ int main(void) {
     ResetGame(); // Автоматически запускаем режим 2 Players
     std::vector<Fruit> fruits;
 
-    fruitSize= 60 * GetScreenWidth() / 1920; 
+    fruitSize = 70 * GetScreenWidth() / 1920;
 
     Image image = LoadImage("apple.png");
     ImageResize(&image, fruitSize, fruitSize);
@@ -811,35 +919,35 @@ int main(void) {
     image = LoadImage("orange.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit1Texture = LoadTextureFromImage(image);
-    
+
     image = LoadImage("watermelon.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit2Texture = LoadTextureFromImage(image);
-    
+
     image = LoadImage("pear.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit3Texture = LoadTextureFromImage(image);
-    
+
     image = LoadImage("bad_fruit1.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit4Texture = LoadTextureFromImage(image);
-    
+
     image = LoadImage("bad_fruit2.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit5Texture = LoadTextureFromImage(image);
-    
+
     image = LoadImage("banana.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit6Texture = LoadTextureFromImage(image);
-    
+
     image = LoadImage("cherry.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit7Texture = LoadTextureFromImage(image);
-    
+
     image = LoadImage("gold_apple.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit8Texture = LoadTextureFromImage(image);
-    
+
     image = LoadImage("gold_watermelon.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit9Texture = LoadTextureFromImage(image);
@@ -847,7 +955,6 @@ int main(void) {
     image = LoadImage("kiwi.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit10Texture = LoadTextureFromImage(image);
-  
 
     UnloadImage(image);
 
@@ -856,6 +963,9 @@ int main(void) {
         if (gameMode == 6) {
             break;
         }
+
+        // Проверяем состояние геймпадов
+        CheckGamepads();
 
         // Переключение полноэкранного режима по F11
         if (IsKeyPressed(KEY_F11)) {
@@ -893,16 +1003,23 @@ int main(void) {
 
                 // Рисуем корзины
                 DrawRectangleRec(player1.basket, player1.color);
-
                 DrawRectangleRec(player2.basket, player2.color);
 
                 // Информация об игроках
                 int instructionFontSize = 25 * GetScreenWidth() / 1920;
                 DrawText("PLAYER 1", 20, 10, instructionFontSize, BLUE);
                 DrawText("A/D keys to move", 20, 40, instructionFontSize - 5, DARKBLUE);
+                if (gamepad1.connected) {
+                    DrawText("Gamepad: LEFT/RIGHT stick", 20, 65, instructionFontSize - 5, GREEN);
+                    DrawText("X button: switch stick", 20, 90, instructionFontSize - 5, YELLOW);
+                }
 
                 DrawText("PLAYER 2", GetScreenWidth() - 150, 10, instructionFontSize, RED);
                 DrawText("Arrow keys to move", GetScreenWidth() - 180, 40, instructionFontSize - 5, DARKBLUE);
+                if (gamepad2.connected) {
+                    DrawText("Gamepad: LEFT/RIGHT stick", GetScreenWidth() - 220, 65, instructionFontSize - 5, GREEN);
+                    DrawText("X button: switch stick", GetScreenWidth() - 180, 90, instructionFontSize - 5, YELLOW);
+                }
 
                 // Инструкция
                 DrawText("TWO PLAYERS MODE", GetScreenWidth() / 2 - 120, GetScreenHeight() / 2 - 60, instructionFontSize + 5, PURPLE);
@@ -910,8 +1027,16 @@ int main(void) {
                 DrawText("Collect bonus fruits for special effects!", GetScreenWidth() / 2 - 200, GetScreenHeight() / 2 + 10, instructionFontSize, DARKBLUE);
                 DrawText("Press SPACE to start the game!", GetScreenWidth() / 2 - 160, GetScreenHeight() / 2 + 50, instructionFontSize + 5, GREEN);
 
-                // Ожидание нажатия SPACE
-                if (IsKeyPressed(KEY_SPACE)) {
+                // Также можно начать игру кнопкой START на геймпаде
+                bool startPressed = IsKeyPressed(KEY_SPACE);
+                if (gamepad1.connected && IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_MIDDLE_RIGHT)) {
+                    startPressed = true;
+                }
+                if (gamepad2.connected && IsGamepadButtonPressed(gamepad2.gamepadNumber, GAMEPAD_BUTTON_MIDDLE_RIGHT)) {
+                    startPressed = true;
+                }
+
+                if (startPressed) {
                     gameStarted = true;
                 }
 
@@ -924,11 +1049,34 @@ int main(void) {
 
             // Controls - только для живых игроков
             if (gameMode == 4) {
-                if (player1.isAlive) MoveRectangle(player1.basket, false, 1); // Player 1 - левая сторона
-                if (player2.isAlive) MoveRectangle(player2.basket, true, 2);  // Player 2 - правая сторона
+                // Player 1 управление: геймпад или клавиатура
+                if (player1.isAlive) {
+                    if (gamepad1.connected) {
+                        MoveRectangleWithGamepad(player1.basket, gamepad1, 1);
+                    }
+                    else {
+                        MoveRectangle(player1.basket, false, 1); // Клавиши A/D
+                    }
+                }
+
+                // Player 2 управление: геймпад или клавиатура  
+                if (player2.isAlive) {
+                    if (gamepad2.connected) {
+                        MoveRectangleWithGamepad(player2.basket, gamepad2, 2);
+                    }
+                    else {
+                        MoveRectangle(player2.basket, true, 2); // Стрелки
+                    }
+                }
             }
             else {
-                MoveRectangle(player1.basket, false);
+                // Одиночные режимы - можно использовать геймпад 1
+                if (gamepad1.connected) {
+                    MoveRectangleWithGamepad(player1.basket, gamepad1);
+                }
+                else {
+                    MoveRectangle(player1.basket, false);
+                }
             }
 
             // Timer only for Time Attack and Two Players modes
@@ -1068,23 +1216,26 @@ int main(void) {
                     }
                 }
 
+                // Отображение информации о геймпадах
+                DrawGamepadInfo();
+
                 // Отображение лидера
                 if (player1.isAlive && player2.isAlive) {
                     if (player1.score > player2.score) {
-                        DrawText("PLAYER 1 LEADING!", GetScreenWidth() / 2 - 80, GetScreenHeight() - 30, smallFontSize, BLUE);
+                        DrawText("PLAYER 1 LEADING!", GetScreenWidth() / 2 - 80, GetScreenHeight() - 60, smallFontSize, BLUE);
                     }
                     else if (player2.score > player1.score) {
-                        DrawText("PLAYER 2 LEADING!", GetScreenWidth() / 2 - 80, GetScreenHeight() - 30, smallFontSize, RED);
+                        DrawText("PLAYER 2 LEADING!", GetScreenWidth() / 2 - 80, GetScreenHeight() - 60, smallFontSize, RED);
                     }
                     else {
-                        DrawText("TIE!", GetScreenWidth() / 2 - 20, GetScreenHeight() - 30, smallFontSize, PURPLE);
+                        DrawText("TIE!", GetScreenWidth() / 2 - 20, GetScreenHeight() - 60, smallFontSize, PURPLE);
                     }
                 }
                 else if (player1.isAlive && !player2.isAlive) {
-                    DrawText("PLAYER 1 WINS BY ELIMINATION!", GetScreenWidth() / 2 - 140, GetScreenHeight() - 30, smallFontSize, BLUE);
+                    DrawText("PLAYER 1 WINS BY ELIMINATION!", GetScreenWidth() / 2 - 140, GetScreenHeight() - 60, smallFontSize, BLUE);
                 }
                 else if (!player1.isAlive && player2.isAlive) {
-                    DrawText("PLAYER 2 WINS BY ELIMINATION!", GetScreenWidth() / 2 - 140, GetScreenHeight() - 30, smallFontSize, RED);
+                    DrawText("PLAYER 2 WINS BY ELIMINATION!", GetScreenWidth() / 2 - 140, GetScreenHeight() - 60, smallFontSize, RED);
                 }
             }
             else {
@@ -1119,6 +1270,11 @@ int main(void) {
                 if (freezeActive) {
                     DrawText("Freeze!", 10, bonusY, smallFontSize, SKYBLUE);
                     bonusY += 25;
+                }
+
+                // Информация о геймпаде для одиночного режима
+                if (gamepad1.connected) {
+                    DrawText("Gamepad Connected", GetScreenWidth() - 200, GetScreenHeight() - 40, smallFontSize - 2, GREEN);
                 }
             }
 
@@ -1198,7 +1354,16 @@ int main(void) {
             DrawText("Press SPACE for menu", GetScreenWidth() / 2 - 100, 390, smallResultFontSize - 5, DARKBLUE);
             DrawText("Press R for Records", GetScreenWidth() / 2 - 100, 420, smallResultFontSize - 5, DARKBLUE);
 
-            if (IsKeyPressed(KEY_SPACE)) {
+            // Также можно использовать кнопку START на геймпаде для возврата в меню
+            bool menuPressed = IsKeyPressed(KEY_SPACE);
+            if (gamepad1.connected && IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_MIDDLE_RIGHT)) {
+                menuPressed = true;
+            }
+            if (gamepad2.connected && IsGamepadButtonPressed(gamepad2.gamepadNumber, GAMEPAD_BUTTON_MIDDLE_RIGHT)) {
+                menuPressed = true;
+            }
+
+            if (menuPressed) {
                 inMenu = true;
                 gameMode = 0; // Возврат в меню
                 fruits.clear();
@@ -1232,6 +1397,7 @@ int main(void) {
     UnloadTexture(Fruit7Texture);
     UnloadTexture(Fruit8Texture);
     UnloadTexture(Fruit9Texture);
+    UnloadTexture(Fruit10Texture);
     CloseWindow();
     return 0;
 }
