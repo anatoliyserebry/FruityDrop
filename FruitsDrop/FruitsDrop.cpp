@@ -19,6 +19,7 @@ Texture2D Fruit6Texture;
 Texture2D Fruit7Texture;
 Texture2D Fruit8Texture;
 Texture2D Fruit9Texture;
+Texture2D Fruit10Texture; 
 
 // Структура для меню
 struct Button {
@@ -78,7 +79,7 @@ bool showTopRating = false;
 bool gameStarted = false; // Флаг начала игры
 bool fullscreen = true; // Флаг полноэкранного режима
 
-float fruitSpeed = 3.0f;
+float fruitSpeed = 2.0f;
 float spawnRate = 1.0f;
 float timeSinceLastSpawn = 0.0f;
 
@@ -193,37 +194,37 @@ void DrawTopRating() {
 }
 
 void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
-    float moveSpeed = 10.0f;
+    float moveSpeed = 20.0f;
 
     // Увеличенная скорость при бонусе скорости
     if (gameMode == 4) {
         // В режиме двух игроков используем индивидуальные бонусы
         if (playerSide == 1 && player1.bonuses.speedBoostActive) {
-            moveSpeed = 15.0f;
+            moveSpeed = 25.0f;
         }
         else if (playerSide == 2 && player2.bonuses.speedBoostActive) {
-            moveSpeed = 15.0f;
+            moveSpeed = 25.0f;
         }
     }
     else {
         // В одиночных режимах используем глобальные бонусы
         if (speedBoostActive) {
-            moveSpeed = 15.0f;
+            moveSpeed = 25.0f;
         }
     }
 
     // Замедление при замедлении времени
     if (gameMode == 4) {
         if (playerSide == 1 && player1.bonuses.slowMotionActive) {
-            moveSpeed = 10.0f;
+            moveSpeed = 20.0f;
         }
         else if (playerSide == 2 && player2.bonuses.slowMotionActive) {
-            moveSpeed = 10.0f;
+            moveSpeed = 20.0f;
         }
     }
     else {
         if (slowMotionActive) {
-            moveSpeed = 10.0f;
+            moveSpeed = 20.0f;
         }
     }
 
@@ -626,39 +627,41 @@ void DrawFruits(const std::vector<Fruit>& fruits) {
                 DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
                 break;
             case 1:
-                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                DrawTexture(Fruit1Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
                 break;
             case 2:
-                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                DrawTexture(Fruit2Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
                 break;
             case 3:
-                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                DrawTexture(Fruit3Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
                 break;
             case 4:
-                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                DrawTexture(Fruit4Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
                 break;
             case 5:
-                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                DrawTexture(Fruit5Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
                 break;
             case 6:
-                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                DrawTexture(Fruit6Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
                 break;
             case 7:
-                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                DrawTexture(Fruit7Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
                 break;
             case 8:
-                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                DrawTexture(Fruit8Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
                 break;
             case 9:
-                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                DrawTexture(Fruit9Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 10:
+                DrawTexture(Fruit10Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
                 break;
             default:
                 break;
             }
-            // Специальные узоры для бонусных фруктов
+            
             if (fruit.type >= 6) {
-                DrawRectangle(fruit.rect.x + 15, fruit.rect.y + 5, 10, 30, WHITE);
-                DrawRectangle(fruit.rect.x + 5, fruit.rect.y + 15, 30, 10, WHITE);
+                
             }
         }
     }
@@ -667,7 +670,7 @@ void DrawFruits(const std::vector<Fruit>& fruits) {
 void ResetGame() {
     gameOver = false;
     gameTime = 120.0f;
-    fruitSpeed = 3.0f;
+    fruitSpeed = 2.0f;
     spawnRate = 1.0f;
     gameStarted = false; // Игра не начата до нажатия SPACE
 
@@ -799,47 +802,52 @@ int main(void) {
     ResetGame(); // Автоматически запускаем режим 2 Players
     std::vector<Fruit> fruits;
 
-    fruitSize= 40 * GetScreenWidth() / 1920; 
+    fruitSize= 60 * GetScreenWidth() / 1920; 
 
-    Image image = LoadImage("Яблоко.png");
+    Image image = LoadImage("apple.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit0Texture = LoadTextureFromImage(image);
 
-    image = LoadImage("апельсин.png");
+    image = LoadImage("orange.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit1Texture = LoadTextureFromImage(image);
     
-    image = LoadImage("арбуз.png");
+    image = LoadImage("watermelon.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit2Texture = LoadTextureFromImage(image);
     
-    image = LoadImage("груша.png");
+    image = LoadImage("pear.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit3Texture = LoadTextureFromImage(image);
     
-    image = LoadImage("кожура.png");
+    image = LoadImage("bad_fruit1.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit4Texture = LoadTextureFromImage(image);
     
-    image = LoadImage("огрызок.png");
+    image = LoadImage("bad_fruit2.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit5Texture = LoadTextureFromImage(image);
     
-    image = LoadImage("Банан.png");
+    image = LoadImage("banana.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit6Texture = LoadTextureFromImage(image);
     
-    image = LoadImage("вишня.png");
+    image = LoadImage("cherry.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit7Texture = LoadTextureFromImage(image);
     
-    image = LoadImage("Золотое яблоко.png");
+    image = LoadImage("gold_apple.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit8Texture = LoadTextureFromImage(image);
     
-    image = LoadImage("Золотой арбуз.png");
+    image = LoadImage("gold_watermelon.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit9Texture = LoadTextureFromImage(image);
+
+    image = LoadImage("kiwi.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit10Texture = LoadTextureFromImage(image);
+  
 
     UnloadImage(image);
 
@@ -969,7 +977,7 @@ int main(void) {
                 }
                 else if (gameMode == 4) {
                     spawnRate = 0.6f;
-                    fruitSpeed = 4.0f;
+                    fruitSpeed = 3.0f;
                 }
             }
 
