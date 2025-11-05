@@ -186,7 +186,7 @@ void DrawGamepadInfo() {
             DrawText("Press X to switch", 20, GetScreenHeight() - 20, infoFontSize - 2, YELLOW);
         }
         else {
-            DrawText("Gamepad 1: Not Connected", 20, GetScreenHeight() - 40, infoFontSize, RED);
+            DrawText("Gamepad 1: Not Connected", 40, GetScreenHeight() - 60, infoFontSize, RED);
             DrawText("Use A/D keys", 20, GetScreenHeight() - 20, infoFontSize - 2, WHITE);
         }
 
@@ -197,7 +197,7 @@ void DrawGamepadInfo() {
             DrawText("Press X to switch", GetScreenWidth() - 200, GetScreenHeight() - 20, infoFontSize - 2, YELLOW);
         }
         else {
-            DrawText("Gamepad 2: Not Connected", GetScreenWidth() - 200, GetScreenHeight() - 40, infoFontSize, RED);
+            DrawText("Gamepad 2: Not Connected", GetScreenWidth() - 260, GetScreenHeight() - 60, infoFontSize, RED);
             DrawText("Use Arrow keys", GetScreenWidth() - 200, GetScreenHeight() - 20, infoFontSize - 2, WHITE);
         }
     }
@@ -845,7 +845,7 @@ void DrawMenu() {
     DrawText("Time Attack", timeBtn.x + 35, timeBtn.y + 15, fontSize, WHITE);
     DrawText("2 Players", twoPlayerBtn.x + 50, twoPlayerBtn.y + 15, fontSize, WHITE);
     DrawText("My Scores", ratingBtn.x + 50, ratingBtn.y + 15, fontSize, WHITE);
-    DrawText("Exit", exitBtn.x + 75, exitBtn.y + 15, fontSize, WHITE);
+    DrawText("Exit", exitBtn.x + 75, exitBtn.y + 15, fontSize, WHITE); 
 
     // Handle clicks 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -1025,7 +1025,7 @@ int main(void) {
                 DrawText("Collect bonus fruits for special effects!", GetScreenWidth() / 2 - 200, GetScreenHeight() / 2 + 10, instructionFontSize, DARKBLUE);
                 DrawText("Press SPACE to start the game!", GetScreenWidth() / 2 - 160, GetScreenHeight() / 2 + 50, instructionFontSize + 5, GREEN);
 
-                // Также можно начать игру кнопкой START на геймпаде
+                //Можно начать игру кнопкой START на геймпаде
                 bool startPressed = IsKeyPressed(KEY_SPACE);
                 if (gamepad1.connected && IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_MIDDLE_RIGHT)) {
                     startPressed = true;
@@ -1153,8 +1153,8 @@ int main(void) {
             int smallFontSize = 20 * GetScreenWidth() / 1920;
 
             if (gameMode == 4) {
-                // Player 1 UI (левая сторона - перемещено ниже)
-                int playerInfoY = 100; // Новая позиция Y вместо 10
+                // Player 1 UI
+                int playerInfoY = 100; 
 
                 DrawText("PLAYER 1", 20, playerInfoY, uiFontSize, BLUE);
                 DrawText(TextFormat("Score: %d", player1.score), 20, playerInfoY + 30, smallFontSize, DARKBLUE);
@@ -1162,17 +1162,17 @@ int main(void) {
                 DrawText(TextFormat("Missed: %d/10", player1.missedFruits), 20, playerInfoY + 80, smallFontSize, DARKBLUE);
                 if (!player1.isAlive) DrawText("ELIMINATED!", 20, playerInfoY + 105, smallFontSize - 5, RED);
 
-                // Player 2 UI (правая сторона - перемещено ниже)
+                // Player 2 UI
                 DrawText("PLAYER 2", GetScreenWidth() - 150, playerInfoY, uiFontSize, RED);
                 DrawText(TextFormat("Score: %d", player2.score), GetScreenWidth() - 150, playerInfoY + 30, smallFontSize, DARKBLUE);
                 DrawText(TextFormat("Lives: %d", player2.lives), GetScreenWidth() - 150, playerInfoY + 55, smallFontSize, player2.isAlive ? RED : GRAY);
                 DrawText(TextFormat("Missed: %d/10", player2.missedFruits), GetScreenWidth() - 150, playerInfoY + 80, smallFontSize, DARKBLUE);
                 if (!player2.isAlive) DrawText("ELIMINATED!", GetScreenWidth() - 150, playerInfoY + 105, smallFontSize - 5, RED);
 
-                // Таймер по центру (оставлен наверху)
-                DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() / 2 - 40, 10, uiFontSize, DARKBLUE);
+                // Таймер по центру
+                DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() / 2 - 40, 30, uiFontSize, DARKBLUE);
 
-                // Отображение активных бонусов для каждого живого игрока (тоже перемещено ниже)
+                // Отображение активных бонусов для каждого живого игрока 
                 int bonusY1 = playerInfoY + 130; // Начинаем ниже информации об игроке
                 int bonusY2 = playerInfoY + 130;
 
