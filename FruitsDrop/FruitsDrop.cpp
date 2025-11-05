@@ -255,7 +255,7 @@ void DrawTopRating() {
     DrawText("Best Score:", GetScreenWidth() / 2 - 150, startY + 240, 25, WHITE);
     DrawText(TextFormat("%d", playerScores.timeAttackBest), GetScreenWidth() / 2 + 50, startY + 240, 25, GOLD);
 
-    // Two Players Mode - раздельные рекорды
+    // Two Players Mode - разделенные рекорды
     DrawText("TWO PLAYERS MODE", GetScreenWidth() / 2 - 120, startY + 280, 30, RED);
 
     // Player 1 record
@@ -357,8 +357,6 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
         if (rec.x < 0) rec.x = 0;
     }
 }
-
-// ... остальной код остается таким же, включая CreateFruit, UpdateBonusEffects, ApplyBonusEffect, UpdateFruits, DrawFruits, ResetGame, DrawMenu, ToggleFullscreen ...
 
 Fruit CreateFruit(int playerSide = 0) {
     Fruit fruit;
@@ -910,7 +908,7 @@ int main(void) {
     ResetGame(); // Автоматически запускаем режим 2 Players
     std::vector<Fruit> fruits;
 
-    fruitSize = 70 * GetScreenWidth() / 1920;
+    fruitSize = 60 * GetScreenWidth() / 1920;
 
     Image image = LoadImage("apple.png");
     ImageResize(&image, fruitSize, fruitSize);
@@ -1155,26 +1153,28 @@ int main(void) {
             int smallFontSize = 20 * GetScreenWidth() / 1920;
 
             if (gameMode == 4) {
-                // Player 1 UI (левая сторона - слева)
-                DrawText("PLAYER 1", 20, 10, uiFontSize, BLUE);
-                DrawText(TextFormat("Score: %d", player1.score), 20, 40, smallFontSize, DARKBLUE);
-                DrawText(TextFormat("Lives: %d", player1.lives), 20, 65, smallFontSize, player1.isAlive ? RED : GRAY);
-                DrawText(TextFormat("Missed: %d/10", player1.missedFruits), 20, 90, smallFontSize, DARKBLUE);
-                if (!player1.isAlive) DrawText("ELIMINATED!", 20, 115, smallFontSize - 5, RED);
+                // Player 1 UI (левая сторона - перемещено ниже)
+                int playerInfoY = 100; // Новая позиция Y вместо 10
 
-                // Player 2 UI (правая сторона - справа)
-                DrawText("PLAYER 2", GetScreenWidth() - 150, 10, uiFontSize, RED);
-                DrawText(TextFormat("Score: %d", player2.score), GetScreenWidth() - 150, 40, smallFontSize, DARKBLUE);
-                DrawText(TextFormat("Lives: %d", player2.lives), GetScreenWidth() - 150, 65, smallFontSize, player2.isAlive ? RED : GRAY);
-                DrawText(TextFormat("Missed: %d/10", player2.missedFruits), GetScreenWidth() - 150, 90, smallFontSize, DARKBLUE);
-                if (!player2.isAlive) DrawText("ELIMINATED!", GetScreenWidth() - 150, 115, smallFontSize - 5, RED);
+                DrawText("PLAYER 1", 20, playerInfoY, uiFontSize, BLUE);
+                DrawText(TextFormat("Score: %d", player1.score), 20, playerInfoY + 30, smallFontSize, DARKBLUE);
+                DrawText(TextFormat("Lives: %d", player1.lives), 20, playerInfoY + 55, smallFontSize, player1.isAlive ? RED : GRAY);
+                DrawText(TextFormat("Missed: %d/10", player1.missedFruits), 20, playerInfoY + 80, smallFontSize, DARKBLUE);
+                if (!player1.isAlive) DrawText("ELIMINATED!", 20, playerInfoY + 105, smallFontSize - 5, RED);
 
-                // Таймер по центру
+                // Player 2 UI (правая сторона - перемещено ниже)
+                DrawText("PLAYER 2", GetScreenWidth() - 150, playerInfoY, uiFontSize, RED);
+                DrawText(TextFormat("Score: %d", player2.score), GetScreenWidth() - 150, playerInfoY + 30, smallFontSize, DARKBLUE);
+                DrawText(TextFormat("Lives: %d", player2.lives), GetScreenWidth() - 150, playerInfoY + 55, smallFontSize, player2.isAlive ? RED : GRAY);
+                DrawText(TextFormat("Missed: %d/10", player2.missedFruits), GetScreenWidth() - 150, playerInfoY + 80, smallFontSize, DARKBLUE);
+                if (!player2.isAlive) DrawText("ELIMINATED!", GetScreenWidth() - 150, playerInfoY + 105, smallFontSize - 5, RED);
+
+                // Таймер по центру (оставлен наверху)
                 DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() / 2 - 40, 10, uiFontSize, DARKBLUE);
 
-                // Отображение активных бонусов для каждого живого игрока
-                int bonusY1 = 140;
-                int bonusY2 = 140;
+                // Отображение активных бонусов для каждого живого игрока (тоже перемещено ниже)
+                int bonusY1 = playerInfoY + 130; // Начинаем ниже информации об игроке
+                int bonusY2 = playerInfoY + 130;
 
                 // Бонусы Player 1 (слева)
                 if (player1.isAlive) {
