@@ -1047,7 +1047,7 @@ int main(void) {
 
             // Controls - только для живых игроков
             if (gameMode == 4) {
-                // Player 1 управление: геймпад или клавиатура
+                // Player 1 управление: геймпад или клавиатура 
                 if (player1.isAlive) {
                     if (gamepad1.connected) {
                         MoveRectangleWithGamepad(player1.basket, gamepad1, 1);
@@ -1240,14 +1240,14 @@ int main(void) {
             }
             else {
                 // Одиночные режимы
-                DrawText("Score:", 10, 10, uiFontSize, DARKBLUE);
-                DrawText(TextFormat("%d", player1.score), 120, 10, uiFontSize, DARKBLUE);
+                DrawText("Score:", 10, 20, uiFontSize, DARKBLUE);
+                DrawText(TextFormat("%d", player1.score), 120, 20, uiFontSize, DARKBLUE);
 
-                DrawText("Lives:", 10, 50, uiFontSize, DARKBLUE);
-                DrawText(TextFormat("%d", player1.lives), 120, 50, uiFontSize, RED);
+                DrawText("Lives:", 10, 60, uiFontSize, DARKBLUE);
+                DrawText(TextFormat("%d", player1.lives), 120, 60, uiFontSize, RED);
 
-                DrawText("Missed:", 10, 90, smallFontSize, DARKBLUE);
-                DrawText(TextFormat("%d/10", player1.missedFruits), 120, 90, smallFontSize, DARKBLUE);
+                DrawText("Missed:", 10, 100, smallFontSize, DARKBLUE);
+                DrawText(TextFormat("%d/10", player1.missedFruits), 120, 100, smallFontSize, DARKBLUE);
 
                 if (gameMode == 3) {
                     DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() - 150, 10, uiFontSize, DARKBLUE);
