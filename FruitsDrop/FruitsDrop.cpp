@@ -17,7 +17,7 @@ Texture2D Fruit4Texture;
 Texture2D Fruit5Texture;
 Texture2D Fruit6Texture;
 Texture2D Fruit7Texture;
-Texture2D Fruit8Texture;
+Texture2D Fruit8Texture; 
 Texture2D Fruit9Texture;
 Texture2D Fruit10Texture;
 
@@ -992,7 +992,7 @@ int main(void) {
         if (!gameOver) {
             // Экран начала игры
             if (!gameStarted) {
-                ClearBackground(SKYBLUE);
+                ClearBackground(WHITE);
 
                 // Рисуем разделенный экран
                 DrawRectangle(0, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(SKYBLUE, 0.1f));
@@ -1005,25 +1005,25 @@ int main(void) {
 
                 // Информация об игроках
                 int instructionFontSize = 25 * GetScreenWidth() / 1920;
-                DrawText("PLAYER 1", 20, 10, instructionFontSize, BLUE);
-                DrawText("A/D keys to move", 20, 40, instructionFontSize - 5, DARKBLUE);
+                DrawText("PLAYER 1", 10, 20, instructionFontSize, BLUE);
+                DrawText("A/D keys to move", 10, 50, instructionFontSize - 5, DARKBLUE);
                 if (gamepad1.connected) {
                     DrawText("Gamepad: LEFT/RIGHT stick", 20, 65, instructionFontSize - 5, GREEN);
                     DrawText("X button: switch stick", 20, 90, instructionFontSize - 5, YELLOW);
                 }
 
-                DrawText("PLAYER 2", GetScreenWidth() - 150, 10, instructionFontSize, RED);
-                DrawText("Arrow keys to move", GetScreenWidth() - 180, 40, instructionFontSize - 5, DARKBLUE);
+                DrawText("PLAYER 2", GetScreenWidth() - 130, 20, instructionFontSize, RED);
+                DrawText("Arrow keys to move", GetScreenWidth() - 210, 50, instructionFontSize - 5, DARKBLUE);
                 if (gamepad2.connected) {
                     DrawText("Gamepad: LEFT/RIGHT stick", GetScreenWidth() - 220, 65, instructionFontSize - 5, GREEN);
                     DrawText("X button: switch stick", GetScreenWidth() - 180, 90, instructionFontSize - 5, YELLOW);
                 }
 
                 // Инструкция
-                DrawText("TWO PLAYERS MODE", GetScreenWidth() / 2 - 120, GetScreenHeight() / 2 - 60, instructionFontSize + 5, PURPLE);
-                DrawText("Catch good fruits, avoid bad ones!", GetScreenWidth() / 2 - 180, GetScreenHeight() / 2 - 20, instructionFontSize, DARKBLUE);
-                DrawText("Collect bonus fruits for special effects!", GetScreenWidth() / 2 - 200, GetScreenHeight() / 2 + 10, instructionFontSize, DARKBLUE);
-                DrawText("Press SPACE to start the game!", GetScreenWidth() / 2 - 160, GetScreenHeight() / 2 + 50, instructionFontSize + 5, GREEN);
+                DrawText("TWO PLAYERS MODE", GetScreenWidth() / 2 - 160, GetScreenHeight() / 2 - 60, instructionFontSize + 7, PURPLE);
+                DrawText("Catch good fruits, avoid bad ones!", GetScreenWidth() / 2 - 210, GetScreenHeight() / 2 - 20, instructionFontSize, DARKBLUE);
+                DrawText("Collect bonus fruits for special effects!", GetScreenWidth() / 2 - 243, GetScreenHeight() / 2 + 10, instructionFontSize, DARKBLUE);
+                DrawText("Press SPACE to start the game!", GetScreenWidth() / 2 - 280, GetScreenHeight() / 2 + 50, instructionFontSize + 10, GREEN);
 
                 //Можно начать игру кнопкой START на геймпаде
                 bool startPressed = IsKeyPressed(KEY_SPACE);
