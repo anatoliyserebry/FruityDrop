@@ -17,7 +17,7 @@ Texture2D Fruit4Texture;
 Texture2D Fruit5Texture;
 Texture2D Fruit6Texture;
 Texture2D Fruit7Texture;
-Texture2D Fruit8Texture; 
+Texture2D Fruit8Texture;
 Texture2D Fruit9Texture;
 Texture2D Fruit10Texture;
 
@@ -665,7 +665,7 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
                     }
                 }
             }
-            else { // Одиночные режимы
+            else { // Одиночные режимы (Classic, Survival, Time Attack)
                 if (CheckCollisionRecs(fruit.rect, player1.basket)) {
                     collision = true;
                     if (fruit.type <= 3) { // Хорошие фрукты
@@ -687,7 +687,7 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
                 fruit.active = false;
             }
 
-            // Проверка пропущенных фруктов
+            // Проверка пропущенных фруктов для ВСЕХ режимов
             if (fruit.rect.y > GetScreenHeight()) {
                 if (fruit.type <= 3) { // Только хорошие фрукты считаются как пропущенные
                     if (gameMode == 4) {
@@ -706,6 +706,7 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
                         }
                     }
                     else {
+                        // Для всех одиночных режимов (Classic, Survival, Time Attack)
                         player1.missedFruits++;
                     }
                 }
@@ -845,7 +846,7 @@ void DrawMenu() {
     DrawText("Time Attack", timeBtn.x + 35, timeBtn.y + 15, fontSize, WHITE);
     DrawText("2 Players", twoPlayerBtn.x + 50, twoPlayerBtn.y + 15, fontSize, WHITE);
     DrawText("My Scores", ratingBtn.x + 50, ratingBtn.y + 15, fontSize, WHITE);
-    DrawText("Exit", exitBtn.x + 75, exitBtn.y + 15, fontSize, WHITE); 
+    DrawText("Exit", exitBtn.x + 75, exitBtn.y + 15, fontSize, WHITE);
 
     // Handle clicks 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -1092,8 +1093,8 @@ int main(void) {
                     gameOver = true;
                 }
             }
-            else if (gameMode == 1 || gameMode == 2) {
-                // В одиночных режимах
+            else if (gameMode == 1 || gameMode == 2 || gameMode == 3) {
+                // В одиночных режимах (Classic, Survival, Time Attack)
                 if (player1.lives <= 0 || player1.missedFruits >= 10) {
                     gameOver = true;
                 }
@@ -1154,7 +1155,7 @@ int main(void) {
 
             if (gameMode == 4) {
                 // Player 1 UI
-                int playerInfoY = 100; 
+                int playerInfoY = 100;
 
                 DrawText("PLAYER 1", 20, playerInfoY, uiFontSize, BLUE);
                 DrawText(TextFormat("Score: %d", player1.score), 20, playerInfoY + 30, smallFontSize, DARKBLUE);
