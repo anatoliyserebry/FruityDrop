@@ -78,7 +78,7 @@ struct GamepadController {
 };
 
 // Global
-int gameMode = 4; // 0: menu, 1: classic, 2: survival, 3: time attack, 4: two players, 5: top rating, 6: exit
+int gameMode = 0; // 0: menu, 1: classic, 2: survival, 3: time attack, 4: two players, 5: top rating, 6: exit
 float gameTime = 120.0f;
 bool gameOver = false;
 bool inMenu = false; // Начинаем сразу с игры
@@ -294,7 +294,7 @@ void DrawTopRating() {
 
     DrawText(TextFormat("Favorite Mode: %s", favoriteMode.c_str()), GetScreenWidth() / 2 - 100, startY + 490, 20, WHITE);
 
-    DrawText("Press ESC to return", GetScreenWidth() / 2 - 100, GetScreenHeight() - 50, 20, WHITE);
+    DrawText("Press Q to return", GetScreenWidth() / 2 - 100, GetScreenHeight() - 50, 20, WHITE);
 }
 
 void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
@@ -1170,7 +1170,7 @@ int main(void) {
                 if (!player2.isAlive) DrawText("ELIMINATED!", GetScreenWidth() - 150, playerInfoY + 105, smallFontSize - 5, RED);
 
                 // Таймер по центру
-                DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() / 2 - 40, 30, uiFontSize, DARKBLUE);
+                DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() / 2 - 40, 50, uiFontSize, DARKBLUE);
 
                 // Отображение активных бонусов для каждого живого игрока 
                 int bonusY1 = playerInfoY + 130; // Начинаем ниже информации об игроке
@@ -1250,7 +1250,7 @@ int main(void) {
                 DrawText(TextFormat("%d/10", player1.missedFruits), 120, 100, smallFontSize, DARKBLUE);
 
                 if (gameMode == 3) {
-                    DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() - 150, 10, uiFontSize, DARKBLUE);
+                    DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() - 150, 40, uiFontSize, DARKBLUE);
                 }
 
                 // Отображение активных бонусов для одиночных режимов
@@ -1374,7 +1374,7 @@ int main(void) {
         }
 
         // Возврат в меню по ESC
-        if (IsKeyPressed(KEY_ESCAPE)) {
+        if (IsKeyPressed(KEY_Q)) {
             if (!inMenu && !showTopRating) {
                 inMenu = true;
                 gameMode = 0; // Возврат в меню
