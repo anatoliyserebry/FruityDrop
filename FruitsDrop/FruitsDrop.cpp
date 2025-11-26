@@ -20,6 +20,8 @@ Texture2D Fruit7Texture;
 Texture2D Fruit8Texture;
 Texture2D Fruit9Texture;
 Texture2D Fruit10Texture;
+Texture2D Fruit11Texture;
+Texture2D Fruit12Texture;
 
 // Структура для меню
 struct Button {
@@ -42,11 +44,11 @@ struct PlayerBestScores {
     int classicBest = 0;
     int survivalBest = 0;
     int timeAttackBest = 0;
-    int twoPlayerBestP1 = 0; // Рекорд Player 1 в Two Players
-    int twoPlayerBestP2 = 0; // Рекорд Player 2 в Two Players
+    int twoPlayerBestP1 = 0; // Рекорд Player 1
+    int twoPlayerBestP2 = 0; // Рекорд Player 2 
 };
 
-// Структура для бонусных эффектов игрока
+// Структура для бонусных эффектов
 struct PlayerBonusEffects {
     float slowMotionTimer = 0.0f;
     float doublePointsTimer = 0.0f;
@@ -81,16 +83,16 @@ struct GamepadController {
 int gameMode = 0; // 0: menu, 1: classic, 2: survival, 3: time attack, 4: two players, 5: top rating, 6: exit
 float gameTime = 120.0f;
 bool gameOver = false;
-bool inMenu = false; // Начинаем сразу с игры
+bool inMenu = false; //start in game directly 
 bool showTopRating = false;
-bool gameStarted = false; // Флаг начала игры
-bool fullscreen = true; // Флаг полноэкранного режима
+bool gameStarted = false; 
+bool fullscreen = true; // full screen mode 
 
 float fruitSpeed = 2.0f;
 float spawnRate = 1.0f;
 float timeSinceLastSpawn = 0.0f;
 
-// Глобальные бонусные эффекты (только для одиночных режимов)
+// Global bonus effects (only in solo modes)
 float slowMotionTimer = 0.0f;
 float doublePointsTimer = 0.0f;
 float freezeTimer = 0.0f;
@@ -100,24 +102,24 @@ bool doublePointsActive = false;
 bool freezeActive = false;
 bool speedBoostActive = false;
 
-// Для рекордов
+// For Scores system 
 PlayerBestScores playerScores;
 
-// Для двух игроков
+// For Two Players system 
 Player player1, player2;
 
-// Для геймпадов
+// For Gamepads 
 GamepadController gamepad1 = { 0, false, true }; // Геймпад 1 (игрок 1)
 GamepadController gamepad2 = { 1, false, true }; // Геймпад 2 (игрок 2)
 
-// Функции для работы с геймпадами
+// For gamepads 
 void CheckGamepads() {
-    // Проверяем подключение геймпадов
+    //verifying the gamepads connection  
     gamepad1.connected = IsGamepadAvailable(gamepad1.gamepadNumber);
     gamepad2.connected = IsGamepadAvailable(gamepad2.gamepadNumber);
 
     if (gamepad1.connected) {
-        // Проверяем кнопки для переключения стиков
+        // Verifying gamepads buttons
         if (IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {
             gamepad1.useLeftStick = !gamepad1.useLeftStick;
         }
@@ -136,7 +138,7 @@ void MoveRectangleWithGamepad(Rectangle& rec, GamepadController& gamepad, int pl
     float moveSpeed = 20.0f;
     Vector2 stickAxis = { 0, 0 };
 
-    // Получаем данные со стика в зависимости от настройки
+    
     if (gamepad.useLeftStick) {
         stickAxis.x = GetGamepadAxisMovement(gamepad.gamepadNumber, GAMEPAD_AXIS_LEFT_X);
     }
@@ -144,12 +146,12 @@ void MoveRectangleWithGamepad(Rectangle& rec, GamepadController& gamepad, int pl
         stickAxis.x = GetGamepadAxisMovement(gamepad.gamepadNumber, GAMEPAD_AXIS_RIGHT_X);
     }
 
-    // Движение с учетом мертвой зоны
+ 
     if (fabs(stickAxis.x) > 0.2f) {
         rec.x += stickAxis.x * moveSpeed;
     }
 
-    // Также поддерживаем кнопки D-pad для точного управления
+    
     if (IsGamepadButtonDown(gamepad.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) {
         rec.x -= moveSpeed;
     }
@@ -157,19 +159,19 @@ void MoveRectangleWithGamepad(Rectangle& rec, GamepadController& gamepad, int pl
         rec.x += moveSpeed;
     }
 
-    // Ограничения для разделенного экрана в режиме двух игроков
+    // Splited screen for 2 Players modes 
     if (gameMode == 4) {
-        if (playerSide == 1) { // Player 1 - левая сторона
+        if (playerSide == 1) { // Player 1 - Left Side 
             if (rec.x < 0) rec.x = 0;
             if (rec.x + rec.width > GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2 - rec.width;
         }
-        else if (playerSide == 2) { // Player 2 - правая сторона
+        else if (playerSide == 2) { // Player 2 - Right Side 
             if (rec.x < GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2;
             if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
         }
     }
     else {
-        // Обычные ограничения для одиночных режимов
+       
         if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
         if (rec.x < 0) rec.x = 0;
     }
@@ -179,7 +181,7 @@ void DrawGamepadInfo() {
     if (gameMode == 4) {
         int infoFontSize = 18 * GetScreenWidth() / 1920;
 
-        // Информация о геймпаде игрока 1
+        // Gamepads info for player 1
         if (gamepad1.connected) {
             DrawText("Gamepad 1: Connected", 20, GetScreenHeight() - 60, infoFontSize, GREEN);
             DrawText(TextFormat("Stick: %s", gamepad1.useLeftStick ? "LEFT" : "RIGHT"), 20, GetScreenHeight() - 40, infoFontSize - 2, WHITE);
@@ -190,7 +192,7 @@ void DrawGamepadInfo() {
             DrawText("Use A/D keys", 20, GetScreenHeight() - 20, infoFontSize - 2, WHITE);
         }
 
-        // Информация о геймпаде игрока 2
+        // Gamepads info for player 2
         if (gamepad2.connected) {
             DrawText("Gamepad 2: Connected", GetScreenWidth() - 200, GetScreenHeight() - 60, infoFontSize, GREEN);
             DrawText(TextFormat("Stick: %s", gamepad2.useLeftStick ? "LEFT" : "RIGHT"), GetScreenWidth() - 200, GetScreenHeight() - 40, infoFontSize - 2, WHITE);
@@ -203,7 +205,7 @@ void DrawGamepadInfo() {
     }
 }
 
-// Для работы с рекордами
+// score system 
 void LoadPlayerScores() {
     playerScores.classicBest = 0;
     playerScores.survivalBest = 0;
@@ -237,7 +239,7 @@ void DrawTopRating() {
 
     DrawText("MY BEST SCORES", GetScreenWidth() / 2 - 150, 50, 40, DARKBLUE);
 
-    // Лучшие результаты по режимам
+    // Best score system
     int startY = 150;
 
     // Classic Mode
@@ -255,7 +257,7 @@ void DrawTopRating() {
     DrawText("Best Score:", GetScreenWidth() / 2 - 150, startY + 240, 25, WHITE);
     DrawText(TextFormat("%d", playerScores.timeAttackBest), GetScreenWidth() / 2 + 50, startY + 240, 25, GOLD);
 
-    // Two Players Mode - разделенные рекорды
+    // Two Players Mode - splited scores for each players 
     DrawText("TWO PLAYERS MODE", GetScreenWidth() / 2 - 120, startY + 280, 30, RED);
 
     // Player 1 record
@@ -266,7 +268,7 @@ void DrawTopRating() {
     DrawText("Player 2 Best:", GetScreenWidth() / 2 - 150, startY + 360, 25, RED);
     DrawText(TextFormat("%d", playerScores.twoPlayerBestP2), GetScreenWidth() / 2 + 50, startY + 360, 25, GOLD);
 
-    // Статистика
+    // Stats 
     DrawText("STATISTICS", GetScreenWidth() / 2 - 70, startY + 420, 25, PURPLE);
 
     int totalBest = playerScores.classicBest + playerScores.survivalBest + playerScores.timeAttackBest +
@@ -274,7 +276,7 @@ void DrawTopRating() {
 
     DrawText(TextFormat("Total Best: %d", totalBest), GetScreenWidth() / 2 - 80, startY + 460, 20, WHITE);
 
-    // Определяем любимый режим
+    // Checking for the most played mode                                                                                                                               
     std::string favoriteMode = "Classic";
     int maxScore = playerScores.classicBest;
 
@@ -300,9 +302,9 @@ void DrawTopRating() {
 void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
     float moveSpeed = 20.0f;
 
-    // Увеличенная скорость при бонусе скорости
+    // Increased move speed for speed bonus fruit 
     if (gameMode == 4) {
-        // В режиме двух игроков используем индивидуальные бонусы
+        // Individual bonus for 2 Players Mode 
         if (playerSide == 1 && player1.bonuses.speedBoostActive) {
             moveSpeed = 25.0f;
         }
@@ -311,13 +313,13 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
         }
     }
     else {
-        // В одиночных режимах используем глобальные бонусы
+        // В одиночных режимах глобальные бонусы
         if (speedBoostActive) {
             moveSpeed = 25.0f;
         }
     }
 
-    // Замедление при замедлении времени
+    // Slow Motion Bonus system 
     if (gameMode == 4) {
         if (playerSide == 1 && player1.bonuses.slowMotionActive) {
             moveSpeed = 20.0f;
@@ -342,17 +344,17 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
 
     // Ограничения для разделенного экрана в режиме двух игроков
     if (gameMode == 4) {
-        if (playerSide == 1) { // Player 1 - левая сторона
+        if (playerSide == 1) { // Player 1 - Left side
             if (rec.x < 0) rec.x = 0;
             if (rec.x + rec.width > GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2 - rec.width;
         }
-        else if (playerSide == 2) { // Player 2 - правая сторона
+        else if (playerSide == 2) { // Player 2 - Right side 
             if (rec.x < GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2;
             if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
         }
     }
     else {
-        // Обычные ограничения для одиночных режимов
+        // 
         if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
         if (rec.x < 0) rec.x = 0;
     }
@@ -361,22 +363,22 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
 Fruit CreateFruit(int playerSide = 0) {
     Fruit fruit;
 
-    if (playerSide == 1) { // Для игрока 1 (левая сторона)
+    if (playerSide == 1) { // For player 1 left side 
         fruit.rect = { (float)GetRandomValue(50, GetScreenWidth() / 2 - 100), -50, (float)fruitSize, (float)fruitSize };
     }
-    else if (playerSide == 2) { // Для игрока 2 (правая сторона)
+    else if (playerSide == 2) { // For player 2 right side 
         fruit.rect = { (float)GetRandomValue(GetScreenWidth() / 2 + 50, GetScreenWidth() - 100), -50, (float)fruitSize, (float)fruitSize };
     }
     else { // Для одиночных режимов
         fruit.rect = { (float)GetRandomValue(50, GetScreenWidth() - 100), -50, (float)fruitSize, (float)fruitSize };
     }
 
-    // Определяем тип фрукта с учетом режима игры
+   
     int randomChance = GetRandomValue(0, 100);
 
     // Редкий шанс появления бонусного фрукта (8%)
     if (randomChance < 8) {
-        // Разные бонусы для разных режимов
+        
         if (gameMode == 2) { // Survival - более полезные бонусы
             fruit.type = GetRandomValue(6, 8); // Slow motion, Double points, Extra life
         }
@@ -399,7 +401,7 @@ Fruit CreateFruit(int playerSide = 0) {
     // Базовая скорость с учетом активных эффектов
     float baseSpeed = fruitSpeed + GetRandomValue(0, 2);
 
-    // В режиме двух игроков учитываем индивидуальные эффекты заморозки
+    
     if (gameMode == 4) {
         if (playerSide == 1 && player1.bonuses.freezeActive) baseSpeed = 0.5f;
         else if (playerSide == 2 && player2.bonuses.freezeActive) baseSpeed = 0.5f;
@@ -409,7 +411,7 @@ Fruit CreateFruit(int playerSide = 0) {
         }
     }
     else {
-        // В одиночных режимах используем глобальные эффекты
+        // В одиночных режимах глобальные эффекты
         if (slowMotionActive) baseSpeed *= 0.4f;
         if (speedBoostActive) baseSpeed *= 1.3f;
         if (freezeActive) baseSpeed = 0.5f;
@@ -430,6 +432,8 @@ Fruit CreateFruit(int playerSide = 0) {
     case 8: fruit.color = PINK; break;
     case 9: fruit.color = MAGENTA; break;
     case 10: fruit.color = ORANGE; break;
+    case 11: fruit.color = GOLD; break;
+    case 12: fruit.color = ORANGE; break;
     }
 
     fruit.effectDuration = 5.0f; // 5 секунд для бонусных эффектов
@@ -438,7 +442,7 @@ Fruit CreateFruit(int playerSide = 0) {
 }
 
 void UpdateBonusEffects() {
-    // Обновляем таймеры бонусов для одиночных режимов
+    // Timer update for bonus 
     if (slowMotionActive) {
         slowMotionTimer -= GetFrameTime();
         if (slowMotionTimer <= 0) {
@@ -467,7 +471,7 @@ void UpdateBonusEffects() {
         }
     }
 
-    // Обновляем таймеры бонусов для игроков в режиме двух игроков
+    // Timer bonus update for 2 players 
     if (gameMode == 4) {
         // Player 1
         if (player1.isAlive) {
@@ -529,7 +533,7 @@ void UpdateBonusEffects() {
 
 void ApplyBonusEffect(int bonusType, int playerNumber = 0) {
     if (gameMode == 4) {
-        // В режиме двух игроков применяем бонусы индивидуально
+        // В режиме двух игроков бонусы индивидуально
         if (playerNumber == 1 && player1.isAlive) {
             switch (bonusType) {
             case 6: // Замедление времени
@@ -576,7 +580,7 @@ void ApplyBonusEffect(int bonusType, int playerNumber = 0) {
         }
     }
     else {
-        // В одиночных режимах используем глобальные бонусы
+        // В одиночных режимах глобальные бонусы
         switch (bonusType) {
         case 6: // Замедление времени
             slowMotionActive = true;
@@ -726,7 +730,7 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
 void DrawFruits(const std::vector<Fruit>& fruits) {
     for (const auto& fruit : fruits) {
         if (fruit.active) {
-            DrawRectangleRec(fruit.rect, fruit.color);
+            //DrawRectangleRec(fruit.rect, fruit.color);
             switch (fruit.type)
             {
             case 0:
@@ -761,6 +765,12 @@ void DrawFruits(const std::vector<Fruit>& fruits) {
                 break;
             case 10:
                 DrawTexture(Fruit10Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 11:
+                DrawTexture(Fruit11Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
+                break;
+            case 12:
+                DrawTexture(Fruit12Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
                 break;
             default:
                 break;
@@ -906,7 +916,7 @@ int main(void) {
     SetTargetFPS(60);
 
     LoadPlayerScores();
-    ResetGame(); // Автоматически запускаем режим 2 Players
+    ResetGame();
     std::vector<Fruit> fruits;
 
     fruitSize = 60 * GetScreenWidth() / 1920;
@@ -943,17 +953,25 @@ int main(void) {
     ImageResize(&image, fruitSize, fruitSize);
     Fruit7Texture = LoadTextureFromImage(image);
 
-    image = LoadImage("gold_apple.png");
+    image = LoadImage("golden_apple.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit8Texture = LoadTextureFromImage(image);
 
-    image = LoadImage("gold_watermelon.png");
+    image = LoadImage("golden_watermelon.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit9Texture = LoadTextureFromImage(image);
 
-    image = LoadImage("kiwi.png");
+    image = LoadImage("bad_fruit3.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit10Texture = LoadTextureFromImage(image);
+
+    image = LoadImage("golden_cherry.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit11Texture = LoadTextureFromImage(image);
+
+    image = LoadImage("kiwi.png");
+    ImageResize(&image, fruitSize, fruitSize);
+    Fruit12Texture = LoadTextureFromImage(image);
 
     UnloadImage(image);
 
@@ -989,22 +1007,22 @@ int main(void) {
             continue;
         }
 
-        // Игровой процесс
+        // Игровой процесс 
         if (!gameOver) {
-            // Экран начала игры
+            // Starting screen 
             if (!gameStarted) {
                 ClearBackground(WHITE);
 
-                // Рисуем разделенный экран
+                // Screen split (DRAW)
                 DrawRectangle(0, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(SKYBLUE, 0.1f));
                 DrawRectangle(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(LIGHTGRAY, 0.1f));
                 DrawLine(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), DARKGRAY);
 
-                // Рисуем корзины
+                // Basket (DRAW)
                 DrawRectangleRec(player1.basket, player1.color);
                 DrawRectangleRec(player2.basket, player2.color);
 
-                // Информация об игроках
+                // Players info (DRAW)
                 int instructionFontSize = 25 * GetScreenWidth() / 1920;
                 DrawText("PLAYER 1", 10, 20, instructionFontSize, BLUE);
                 DrawText("A/D keys to move", 10, 50, instructionFontSize - 5, DARKBLUE);
@@ -1026,7 +1044,7 @@ int main(void) {
                 DrawText("Collect bonus fruits for special effects!", GetScreenWidth() / 2 - 243, GetScreenHeight() / 2 + 10, instructionFontSize, DARKBLUE);
                 DrawText("Press SPACE to start the game!", GetScreenWidth() / 2 - 280, GetScreenHeight() / 2 + 50, instructionFontSize + 10, GREEN);
 
-                //Можно начать игру кнопкой START на геймпаде
+                //Can start the game with START button in the gamepad 
                 bool startPressed = IsKeyPressed(KEY_SPACE);
                 if (gamepad1.connected && IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_MIDDLE_RIGHT)) {
                     startPressed = true;
@@ -1086,25 +1104,25 @@ int main(void) {
                 }
             }
 
-            // Проверка условий завершения игры для всех режимов
+            
             if (gameMode == 4) {
-                // В режиме двух игроков игра заканчивается по таймеру или если оба игрока проиграли
+                // In 2 players game modes, the game end when the timer end or if the 2 players are dead 
                 if (gameTime <= 0 || (!player1.isAlive && !player2.isAlive)) {
                     gameOver = true;
                 }
             }
             else if (gameMode == 1 || gameMode == 2 || gameMode == 3) {
-                // В одиночных режимах (Classic, Survival, Time Attack)
+                // Solo game modes (Classic, Survival, Time Attack)
                 if (player1.lives <= 0 || player1.missedFruits >= 10) {
                     gameOver = true;
                 }
             }
 
-            // Spawn fruits только для живых игроков
+            // Spawn fruits only for alive players 
             timeSinceLastSpawn += GetFrameTime();
             if (timeSinceLastSpawn >= spawnRate) {
                 if (gameMode == 4) {
-                    // Для двух игроков создаем фрукты только для живых игроков
+                    // Spawn fruits only for alive players 
                     if (player1.isAlive) fruits.push_back(CreateFruit(1)); // Для игрока 1
                     if (player2.isAlive) fruits.push_back(CreateFruit(2)); // Для игрока 2
                 }
@@ -1132,14 +1150,14 @@ int main(void) {
 
             // Drawing
             if (gameMode == 4) {
-                // Разделенный экран для двух игроков
+                // Splited Screen for 2 players 
                 DrawRectangle(0, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(SKYBLUE, 0.1f));
                 DrawRectangle(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(LIGHTGRAY, 0.1f));
 
-                // Разделительная линия
+                // Splited screen middle line 
                 DrawLine(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), DARKGRAY);
 
-                // Рисуем корзины только живых игроков
+                // Basket only for alive players 
                 if (player1.isAlive) DrawRectangleRec(player1.basket, player1.color);
                 if (player2.isAlive) DrawRectangleRec(player2.basket, player2.color);
             }
@@ -1154,7 +1172,7 @@ int main(void) {
             int smallFontSize = 20 * GetScreenWidth() / 1920;
 
             if (gameMode == 4) {
-                // Player 1 UI
+                // Player 1 (DRAW TEXT) 
                 int playerInfoY = 100;
 
                 DrawText("PLAYER 1", 20, playerInfoY, uiFontSize, BLUE);
@@ -1163,21 +1181,21 @@ int main(void) {
                 DrawText(TextFormat("Missed: %d/10", player1.missedFruits), 20, playerInfoY + 80, smallFontSize, DARKBLUE);
                 if (!player1.isAlive) DrawText("ELIMINATED!", 20, playerInfoY + 105, smallFontSize - 5, RED);
 
-                // Player 2 UI
+                // Player 2 UI (DRAW TEXT) 
                 DrawText("PLAYER 2", GetScreenWidth() - 150, playerInfoY, uiFontSize, RED);
                 DrawText(TextFormat("Score: %d", player2.score), GetScreenWidth() - 150, playerInfoY + 30, smallFontSize, DARKBLUE);
                 DrawText(TextFormat("Lives: %d", player2.lives), GetScreenWidth() - 150, playerInfoY + 55, smallFontSize, player2.isAlive ? RED : GRAY);
                 DrawText(TextFormat("Missed: %d/10", player2.missedFruits), GetScreenWidth() - 150, playerInfoY + 80, smallFontSize, DARKBLUE);
                 if (!player2.isAlive) DrawText("ELIMINATED!", GetScreenWidth() - 150, playerInfoY + 105, smallFontSize - 5, RED);
 
-                // Таймер по центру
+                // Timer in the middle of the screen (DRAW TEXT) 
                 DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() / 2 - 40, 50, uiFontSize, DARKBLUE);
 
-                // Отображение активных бонусов для каждого живого игрока 
-                int bonusY1 = playerInfoY + 130; // Начинаем ниже информации об игроке
+                // Showing bonus for each players  
+                int bonusY1 = playerInfoY + 130; // Player Info 
                 int bonusY2 = playerInfoY + 130;
 
-                // Бонусы Player 1 (слева)
+                // Players bonus Info (DRAW TEXT) - Left side 
                 if (player1.isAlive) {
                     if (player1.bonuses.slowMotionActive) {
                         DrawText("Slow Motion!", 20, bonusY1, smallFontSize - 5, BLUE);
@@ -1197,7 +1215,7 @@ int main(void) {
                     }
                 }
 
-                // Бонусы Player 2 (справа)
+                // Two Players bonus Info (DRAW TEXT) - right side
                 if (player2.isAlive) {
                     if (player2.bonuses.slowMotionActive) {
                         DrawText("Slow Motion!", GetScreenWidth() - 150, bonusY2, smallFontSize - 5, BLUE);
@@ -1217,10 +1235,10 @@ int main(void) {
                     }
                 }
 
-                // Отображение информации о геймпадах
+                // Gamepads info (DRAW TEXT) 
                 DrawGamepadInfo();
 
-                // Отображение лидера
+                // Lead system for 2 Players mode (Showing who, of the 2 Players are leading) 
                 if (player1.isAlive && player2.isAlive) {
                     if (player1.score > player2.score) {
                         DrawText("PLAYER 1 LEADING!", GetScreenWidth() / 2 - 80, GetScreenHeight() - 60, smallFontSize, BLUE);
@@ -1240,7 +1258,7 @@ int main(void) {
                 }
             }
             else {
-                // Одиночные режимы
+                // Solo modes (Draw Text) 
                 DrawText("Score:", 10, 20, uiFontSize, DARKBLUE);
                 DrawText(TextFormat("%d", player1.score), 120, 20, uiFontSize, DARKBLUE);
 
@@ -1254,7 +1272,7 @@ int main(void) {
                     DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() - 150, 40, uiFontSize, DARKBLUE);
                 }
 
-                // Отображение активных бонусов для одиночных режимов
+                // Showing the active bonus 
                 int bonusY = 130;
                 if (slowMotionActive) {
                     DrawText("Slow Motion!", 10, bonusY, smallFontSize, BLUE);
@@ -1273,7 +1291,7 @@ int main(void) {
                     bonusY += 25;
                 }
 
-                // Информация о геймпаде для одиночного режима
+                // Gamepads infos for 1 players mods 
                 if (gamepad1.connected) {
                     DrawText("Gamepad Connected", GetScreenWidth() - 200, GetScreenHeight() - 40, smallFontSize - 2, GREEN);
                 }
@@ -1281,7 +1299,7 @@ int main(void) {
 
         }
         else {
-            // Game over screen - сохраняем рекорды
+            // Game over screen - records save 
             const char* modeName = "";
             std::string modeStr = "";
 
@@ -1307,7 +1325,7 @@ int main(void) {
                 SavePlayerScore(player2.score, modeStr, 2);
             }
 
-            // Проверяем, побит ли рекорд
+            // Verifying if the previous record is beated  
             bool newRecord1 = false;
             bool newRecord2 = false;
 
@@ -1355,7 +1373,7 @@ int main(void) {
             DrawText("Press SPACE for menu", GetScreenWidth() / 2 - 100, 390, smallResultFontSize - 5, DARKBLUE);
             DrawText("Press R for Records", GetScreenWidth() / 2 - 100, 420, smallResultFontSize - 5, DARKBLUE);
 
-            // Также можно использовать кнопку START на геймпаде для возврата в меню
+            // Press START button in gamepad to launch the game 
             bool menuPressed = IsKeyPressed(KEY_SPACE);
             if (gamepad1.connected && IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_MIDDLE_RIGHT)) {
                 menuPressed = true;
@@ -1366,7 +1384,7 @@ int main(void) {
 
             if (menuPressed) {
                 inMenu = true;
-                gameMode = 0; // Возврат в меню
+                gameMode = 0; // Back to menu Sys
                 fruits.clear();
             }
             if (IsKeyPressed(KEY_R)) {
@@ -1374,11 +1392,11 @@ int main(void) {
             }
         }
 
-        // Возврат в меню по ESC
+        // back to menu with Q (ESC not working) 
         if (IsKeyPressed(KEY_Q)) {
             if (!inMenu && !showTopRating) {
                 inMenu = true;
-                gameMode = 0; // Возврат в меню
+                gameMode = 0; // back to menu alternative system with menu = game mode 0
                 fruits.clear();
             }
             else if (showTopRating) {
@@ -1388,6 +1406,7 @@ int main(void) {
 
         EndDrawing();
     }
+    // Unloading textures 
     UnloadTexture(Fruit0Texture);
     UnloadTexture(Fruit1Texture);
     UnloadTexture(Fruit2Texture);
@@ -1399,6 +1418,8 @@ int main(void) {
     UnloadTexture(Fruit8Texture);
     UnloadTexture(Fruit9Texture);
     UnloadTexture(Fruit10Texture);
+    UnloadTexture(Fruit11Texture);
+    UnloadTexture(Fruit12Texture);
     CloseWindow();
     return 0;
 }
