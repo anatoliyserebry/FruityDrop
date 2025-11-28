@@ -22,6 +22,7 @@ Texture2D Fruit9Texture;
 Texture2D Fruit10Texture;
 Texture2D Fruit11Texture;
 Texture2D Fruit12Texture;
+Texture2D BasketTexture; // Добавлена текстура для корзины
 
 // Структура для меню
 struct Button {
@@ -85,7 +86,7 @@ float gameTime = 120.0f;
 bool gameOver = false;
 bool inMenu = false; //start in game directly 
 bool showTopRating = false;
-bool gameStarted = false; 
+bool gameStarted = false;
 bool fullscreen = true; // full screen mode 
 
 float fruitSpeed = 2.0f;
@@ -138,7 +139,7 @@ void MoveRectangleWithGamepad(Rectangle& rec, GamepadController& gamepad, int pl
     float moveSpeed = 20.0f;
     Vector2 stickAxis = { 0, 0 };
 
-    
+
     if (gamepad.useLeftStick) {
         stickAxis.x = GetGamepadAxisMovement(gamepad.gamepadNumber, GAMEPAD_AXIS_LEFT_X);
     }
@@ -146,12 +147,12 @@ void MoveRectangleWithGamepad(Rectangle& rec, GamepadController& gamepad, int pl
         stickAxis.x = GetGamepadAxisMovement(gamepad.gamepadNumber, GAMEPAD_AXIS_RIGHT_X);
     }
 
- 
+
     if (fabs(stickAxis.x) > 0.2f) {
         rec.x += stickAxis.x * moveSpeed;
     }
 
-    
+
     if (IsGamepadButtonDown(gamepad.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) {
         rec.x -= moveSpeed;
     }
@@ -171,7 +172,7 @@ void MoveRectangleWithGamepad(Rectangle& rec, GamepadController& gamepad, int pl
         }
     }
     else {
-       
+
         if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
         if (rec.x < 0) rec.x = 0;
     }
@@ -373,12 +374,12 @@ Fruit CreateFruit(int playerSide = 0) {
         fruit.rect = { (float)GetRandomValue(50, GetScreenWidth() - 100), -50, (float)fruitSize, (float)fruitSize };
     }
 
-   
+
     int randomChance = GetRandomValue(0, 100);
 
     // Редкий шанс появления бонусного фрукта (8%)
     if (randomChance < 8) {
-        
+
         if (gameMode == 2) { // Survival - более полезные бонусы
             fruit.type = GetRandomValue(6, 8); // Slow motion, Double points, Extra life
         }
@@ -401,7 +402,7 @@ Fruit CreateFruit(int playerSide = 0) {
     // Базовая скорость с учетом активных эффектов
     float baseSpeed = fruitSpeed + GetRandomValue(0, 2);
 
-    
+
     if (gameMode == 4) {
         if (playerSide == 1 && player1.bonuses.freezeActive) baseSpeed = 0.5f;
         else if (playerSide == 2 && player2.bonuses.freezeActive) baseSpeed = 0.5f;
@@ -921,6 +922,7 @@ int main(void) {
 
     fruitSize = 60 * GetScreenWidth() / 1920;
 
+    // Загрузка текстур фруктов
     Image image = LoadImage("apple.png");
     ImageResize(&image, fruitSize, fruitSize);
     Fruit0Texture = LoadTextureFromImage(image);
@@ -973,6 +975,11 @@ int main(void) {
     ImageResize(&image, fruitSize, fruitSize);
     Fruit12Texture = LoadTextureFromImage(image);
 
+    // Загрузка текстуры корзины
+    image = LoadImage("basket.png");
+    ImageResize(&image, 100 * GetScreenWidth() / 1920, 60 * GetScreenHeight() / 1080);
+    BasketTexture = LoadTextureFromImage(image);
+
     UnloadImage(image);
 
     while (!WindowShouldClose()) {
@@ -1018,9 +1025,9 @@ int main(void) {
                 DrawRectangle(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(LIGHTGRAY, 0.1f));
                 DrawLine(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), DARKGRAY);
 
-                // Basket (DRAW)
-                DrawRectangleRec(player1.basket, player1.color);
-                DrawRectangleRec(player2.basket, player2.color);
+                // Basket (DRAW) - теперь с текстурой
+                DrawTexture(BasketTexture, player1.basket.x, player1.basket.y, player1.color);
+                DrawTexture(BasketTexture, player2.basket.x, player2.basket.y, player2.color);
 
                 // Players info (DRAW)
                 int instructionFontSize = 25 * GetScreenWidth() / 1920;
@@ -1104,7 +1111,7 @@ int main(void) {
                 }
             }
 
-            
+
             if (gameMode == 4) {
                 // In 2 players game modes, the game end when the timer end or if the 2 players are dead 
                 if (gameTime <= 0 || (!player1.isAlive && !player2.isAlive)) {
@@ -1157,12 +1164,12 @@ int main(void) {
                 // Splited screen middle line 
                 DrawLine(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), DARKGRAY);
 
-                // Basket only for alive players 
-                if (player1.isAlive) DrawRectangleRec(player1.basket, player1.color);
-                if (player2.isAlive) DrawRectangleRec(player2.basket, player2.color);
+                // Basket only for alive players - теперь с текстурой
+                if (player1.isAlive) DrawTexture(BasketTexture, player1.basket.x, player1.basket.y, player1.color);
+                if (player2.isAlive) DrawTexture(BasketTexture, player2.basket.x, player2.basket.y, player2.color);
             }
             else {
-                DrawRectangleRec(player1.basket, ORANGE);
+                DrawTexture(BasketTexture, player1.basket.x, player1.basket.y, ORANGE);
             }
 
             DrawFruits(fruits);
@@ -1420,6 +1427,7 @@ int main(void) {
     UnloadTexture(Fruit10Texture);
     UnloadTexture(Fruit11Texture);
     UnloadTexture(Fruit12Texture);
+    UnloadTexture(BasketTexture); // Выгрузка текстуры корзины
     CloseWindow();
     return 0;
 }
