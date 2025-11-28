@@ -22,7 +22,7 @@ Texture2D Fruit9Texture;
 Texture2D Fruit10Texture;
 Texture2D Fruit11Texture;
 Texture2D Fruit12Texture;
-Texture2D BasketTexture; // Добавлена текстура для корзины
+Texture2D BasketTexture; 
 
 // Структура для меню
 struct Button {
@@ -84,7 +84,7 @@ struct GamepadController {
 int gameMode = 0; // 0: menu, 1: classic, 2: survival, 3: time attack, 4: two players, 5: top rating, 6: exit
 float gameTime = 120.0f;
 bool gameOver = false;
-bool inMenu = false; //start in game directly 
+bool inMenu = true; //start in game directly 
 bool showTopRating = false;
 bool gameStarted = false;
 bool fullscreen = true; // full screen mode 
