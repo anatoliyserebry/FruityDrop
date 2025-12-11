@@ -6,8 +6,10 @@
 #include <algorithm>
 #include <fstream>
 
-const int screenWidth = 1920;
-const int screenHeight = 1080;
+int baseWidth = 1920;
+int baseHeight = 1080;
+int screenWidth;
+int screenHeight;
 int fruitSize;
 Texture2D Fruit0Texture;
 Texture2D Fruit1Texture;
@@ -25,28 +27,54 @@ Texture2D Fruit12Texture;
 Texture2D BasketTexture;
 
 // Текстуры для меню
-Texture2D playBigTexture;      // Большая кнопка Play (300x150)
-Texture2D recTexture;          // Маленькая кнопка Records (80x80)
-Texture2D howToPlayTexture;    // Маленькая кнопка How to Play (80x80)
-Texture2D exitTexture;         // Маленькая кнопка Exit (80x80)
-Texture2D playSmallTexture;    // Маленькая кнопка Play для меню выбора (300x100)
-Texture2D backgroundTexture;   // Фон игры
+Texture2D playBigTexture;
+Texture2D recTexture;
+Texture2D howToPlayTexture;
+Texture2D exitTexture;
+Texture2D playSmallTexture;
+Texture2D backgroundTexture;
+
+// Переменные для масштабирования
+float scaleX = 1.0f;
+float scaleY = 1.0f;
+
+// Вспомогательные функции для масштабирования
+int ScaleInt(int value) {
+    return static_cast<int>(value * scaleX);
+}
+
+int ScaleIntY(int value) {
+    return static_cast<int>(value * scaleY);
+}
+
+float ScaleFloat(float value) {
+    return value * scaleX;
+}
+
+float ScaleFloatY(float value) {
+    return value * scaleY;
+}
+
+void UpdateScale() {
+    scaleX = static_cast<float>(screenWidth) / baseWidth;
+    scaleY = static_cast<float>(screenHeight) / baseHeight;
+}
 
 // Переменные для меню
-int currentMenu = 0; // 0 = главное меню, 1 = выбор режима
-int selectedGameMode = 0; // 0 = не выбрано, 1 = classic, 2 = survival, 3 = time attack, 4 = two players
+int currentMenu = 0;
+int selectedGameMode = 0;
 
 // Структура для кнопок
 struct MenuButton {
     Rectangle rect;
-    int id; // 0 = play big, 1 = rec, 2 = how, 3 = exit, 4 = classic, 5 = survival, 6 = time, 7 = two players, 8 = play small, 9 = rec small, 10 = exit small
+    int id;
     bool hovered;
 };
 
-// Структура для fruits (хорошие, плохие, бонусные) 
+// Структура для fruits
 struct Fruit {
     Rectangle rect;
-    int type; // 0-3: хорошие, 4-5: плохие, 6-9: бонусные
+    int type;
     float speed;
     bool active;
     Color color;
@@ -58,8 +86,8 @@ struct PlayerBestScores {
     int classicBest = 0;
     int survivalBest = 0;
     int timeAttackBest = 0;
-    int twoPlayerBestP1 = 0; // Рекорд Player 1
-    int twoPlayerBestP2 = 0; // Рекорд Player 2 
+    int twoPlayerBestP1 = 0;
+    int twoPlayerBestP2 = 0;
 };
 
 // Структура для бонусных эффектов
@@ -90,22 +118,22 @@ struct Player {
 struct GamepadController {
     int gamepadNumber;
     bool connected;
-    bool useLeftStick; // true - левый стик, false - правый стик
+    bool useLeftStick;
 };
 
 // Global
-int gameMode = 0; // 0: в меню, 1: classic, 2: survival, 3: time attack, 4: two players, 5: exit
+int gameMode = 0;
 float gameTime = 120.0f;
 bool gameOver = false;
 bool showTopRating = false;
 bool gameStarted = false;
-bool fullscreen = true; // full screen mode 
+bool fullscreen = true;
 
 float fruitSpeed = 2.0f;
 float spawnRate = 1.0f;
 float timeSinceLastSpawn = 0.0f;
 
-// Global bonus effects (only in solo modes)
+// Global bonus effects
 float slowMotionTimer = 0.0f;
 float doublePointsTimer = 0.0f;
 float freezeTimer = 0.0f;
@@ -122,8 +150,8 @@ PlayerBestScores playerScores;
 Player player1, player2;
 
 // For Gamepads 
-GamepadController gamepad1 = { 0, false, true }; // Геймпад 1 (игрок 1)
-GamepadController gamepad2 = { 1, false, true }; // Геймпад 2 (игрок 2)
+GamepadController gamepad1 = { 0, false, true };
+GamepadController gamepad2 = { 1, false, true };
 
 // Массивы кнопок
 std::vector<MenuButton> mainMenuButtons;
@@ -135,88 +163,87 @@ float gamepadMenuCooldown = 0.0f;
 
 // Загрузка текстур меню
 void LoadMenuTextures() {
-    // Загрузка текстур меню
-    Image img;
-
     // Загрузка фона
-    img = LoadImage("background.png");
+    Image img = LoadImage("background.png");
     if (img.data != NULL) {
-        ImageResize(&img, GetScreenWidth(), GetScreenHeight());
+        ImageResize(&img, screenWidth, screenHeight);
         backgroundTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
     else {
-        
-        
+        // Если фон не загружен, создаем однотонный фон
+        img = GenImageColor(screenWidth, screenHeight, DARKBLUE);
         backgroundTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
 
-    // Большая кнопка Play (300x150)
+    // Большая кнопка Play
+    int playWidth = ScaleInt(300);
+    int playHeight = ScaleInt(70);
     img = LoadImage("play.png");
     if (img.data != NULL) {
         ImageCrop(&img, { 37, 32, 416, 72 });
-        ImageResize(&img, 300, 70);
+        ImageResize(&img, playWidth, playHeight);
         playBigTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
     else {
-        // Если файл не найден, создаем временную текстуру
-        img = GenImageColor(300, 150, GREEN);
+        // Создаем кнопку Play с однотонным цветом
+        img = GenImageColor(playWidth, playHeight, GREEN);
         playBigTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
 
-    // Маленькая кнопка Records (80x80)
+    // Маленькие кнопки
+    int smallBtnSize = ScaleInt(80);
     img = LoadImage("rec.png");
     if (img.data != NULL) {
-        ImageResize(&img, 80, 80);
+        ImageResize(&img, smallBtnSize, smallBtnSize);
         recTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
     else {
-        img = GenImageColor(80, 80, BLUE);
+        img = GenImageColor(smallBtnSize, smallBtnSize, BLUE);
         recTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
 
-    // Маленькая кнопка How to Play (80x80)
     img = LoadImage("how_to_play.png");
     if (img.data != NULL) {
-        ImageResize(&img, 80, 80);
+        ImageResize(&img, smallBtnSize, smallBtnSize);
         howToPlayTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
     else {
-        img = GenImageColor(80, 80, ORANGE);
+        img = GenImageColor(smallBtnSize, smallBtnSize, ORANGE);
         howToPlayTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
 
-    // Маленькая кнопка Exit (80x80)
     img = LoadImage("exit.png");
     if (img.data != NULL) {
-        ImageResize(&img, 80, 80);
+        ImageResize(&img, smallBtnSize, smallBtnSize);
         exitTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
     else {
-        img = GenImageColor(80, 80, RED);
+        img = GenImageColor(smallBtnSize, smallBtnSize, RED);
         exitTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
 
-    // Маленькая кнопка Play для меню выбора (300x100)
-    // Используем ту же текстуру play.png, но другого размера
+    // Маленькая кнопка Play для меню выбора
+    int smallPlayWidth = ScaleInt(300);
+    int smallPlayHeight = ScaleInt(70);
     img = LoadImage("play.png");
     if (img.data != NULL) {
         ImageCrop(&img, { 37, 32, 416, 72 });
-        ImageResize(&img, 300, 70);
+        ImageResize(&img, smallPlayWidth, smallPlayHeight);
         playSmallTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
     else {
-        img = GenImageColor(300, 100, GREEN);
+        img = GenImageColor(smallPlayWidth, smallPlayHeight, GREEN);
         playSmallTexture = LoadTextureFromImage(img);
         UnloadImage(img);
     }
@@ -226,30 +253,50 @@ void LoadMenuTextures() {
 void InitMainMenu() {
     mainMenuButtons.clear();
 
-    // Большая кнопка Play в центре (300x150)
+    // Большая кнопка Play в центре
     MenuButton playBigBtn;
-    playBigBtn.rect = { GetScreenWidth() / 2.0f - 150, GetScreenHeight() / 2.0f - 75, 300, 70 };
+    playBigBtn.rect = {
+        screenWidth / 2.0f - ScaleFloat(150),
+        screenHeight / 2.0f - ScaleFloat(75),
+        ScaleFloat(300),
+        ScaleFloat(70)
+    };
     playBigBtn.id = 0;
     playBigBtn.hovered = false;
     mainMenuButtons.push_back(playBigBtn);
 
-    // Маленькая кнопка Records слева (80x80)
+    // Маленькая кнопка Records слева
     MenuButton recBtn;
-    recBtn.rect = { GetScreenWidth() / 2.0f - 200, GetScreenHeight() / 2.0f + 100, 80, 80 };
+    recBtn.rect = {
+        screenWidth / 2.0f - ScaleFloat(200),
+        screenHeight / 2.0f + ScaleFloat(100),
+        ScaleFloat(80),
+        ScaleFloat(80)
+    };
     recBtn.id = 1;
     recBtn.hovered = false;
     mainMenuButtons.push_back(recBtn);
 
-    // Маленькая кнопка How to Play в центре (80x80)
+    // Маленькая кнопка How to Play в центре
     MenuButton howBtn;
-    howBtn.rect = { GetScreenWidth() / 2.0f - 40, GetScreenHeight() / 2.0f + 100, 80, 80 };
+    howBtn.rect = {
+        screenWidth / 2.0f - ScaleFloat(40),
+        screenHeight / 2.0f + ScaleFloat(100),
+        ScaleFloat(80),
+        ScaleFloat(80)
+    };
     howBtn.id = 2;
     howBtn.hovered = false;
     mainMenuButtons.push_back(howBtn);
 
-    // Маленькая кнопка Exit справа (80x80)
+    // Маленькая кнопка Exit справа
     MenuButton exitBtn;
-    exitBtn.rect = { GetScreenWidth() / 2.0f + 120, GetScreenHeight() / 2.0f + 100, 80, 80 };
+    exitBtn.rect = {
+        screenWidth / 2.0f + ScaleFloat(120),
+        screenHeight / 2.0f + ScaleFloat(100),
+        ScaleFloat(80),
+        ScaleFloat(80)
+    };
     exitBtn.id = 3;
     exitBtn.hovered = false;
     mainMenuButtons.push_back(exitBtn);
@@ -261,10 +308,10 @@ void InitMainMenu() {
 void InitChooseModeMenu() {
     chooseModeButtons.clear();
 
-    int buttonWidth = 180;
-    int buttonHeight = 100;
-    int startX = GetScreenWidth() / 2 - (2 * buttonWidth + 40) / 2;
-    int startY = 200;
+    int buttonWidth = ScaleInt(180);
+    int buttonHeight = ScaleInt(100);
+    int startX = screenWidth / 2 - (2 * buttonWidth + ScaleInt(40)) / 2;
+    int startY = ScaleInt(200);
 
     // Classic Mode (левая верхняя)
     MenuButton classicBtn;
@@ -275,42 +322,57 @@ void InitChooseModeMenu() {
 
     // Survival Mode (правая верхняя)
     MenuButton survivalBtn;
-    survivalBtn.rect = { (float)(startX + buttonWidth + 40), (float)startY, (float)buttonWidth, (float)buttonHeight };
+    survivalBtn.rect = { (float)(startX + buttonWidth + ScaleInt(40)), (float)startY, (float)buttonWidth, (float)buttonHeight };
     survivalBtn.id = 5;
     survivalBtn.hovered = false;
     chooseModeButtons.push_back(survivalBtn);
 
     // Time Attack (левая нижняя)
     MenuButton timeBtn;
-    timeBtn.rect = { (float)startX, (float)(startY + buttonHeight + 40), (float)buttonWidth, (float)buttonHeight };
+    timeBtn.rect = { (float)startX, (float)(startY + buttonHeight + ScaleInt(40)), (float)buttonWidth, (float)buttonHeight };
     timeBtn.id = 6;
     timeBtn.hovered = false;
     chooseModeButtons.push_back(timeBtn);
 
     // Two Players (правая нижняя)
     MenuButton twoPlayerBtn;
-    twoPlayerBtn.rect = { (float)(startX + buttonWidth + 40), (float)(startY + buttonHeight + 40), (float)buttonWidth, (float)buttonHeight };
+    twoPlayerBtn.rect = { (float)(startX + buttonWidth + ScaleInt(40)), (float)(startY + buttonHeight + ScaleInt(40)), (float)buttonWidth, (float)buttonHeight };
     twoPlayerBtn.id = 7;
     twoPlayerBtn.hovered = false;
     chooseModeButtons.push_back(twoPlayerBtn);
 
-    // Большая кнопка Play внизу (300x100)
+    // Большая кнопка Play внизу
     MenuButton playSmallBtn;
-    playSmallBtn.rect = { GetScreenWidth() / 2.0f - 150, GetScreenHeight() - 250.0f, 300, 70 };
+    playSmallBtn.rect = {
+        screenWidth / 2.0f - ScaleFloat(150),
+        screenHeight - ScaleFloat(250.0f),
+        ScaleFloat(300),
+        ScaleFloat(70)
+    };
     playSmallBtn.id = 8;
     playSmallBtn.hovered = false;
     chooseModeButtons.push_back(playSmallBtn);
 
-    // Кнопка Records слева (80x80)
+    // Кнопка Records слева
     MenuButton recBtn2;
-    recBtn2.rect = { GetScreenWidth() / 2.0f - 200, GetScreenHeight() - 150.0f, 80, 80 };
+    recBtn2.rect = {
+        screenWidth / 2.0f - ScaleFloat(200),
+        screenHeight - ScaleFloat(150.0f),
+        ScaleFloat(80),
+        ScaleFloat(80)
+    };
     recBtn2.id = 9;
     recBtn2.hovered = false;
     chooseModeButtons.push_back(recBtn2);
 
-    // Кнопка Exit справа (80x80)
+    // Кнопка Exit справа
     MenuButton exitBtn2;
-    exitBtn2.rect = { GetScreenWidth() / 2.0f + 120, GetScreenHeight() - 150.0f, 80, 80 };
+    exitBtn2.rect = {
+        screenWidth / 2.0f + ScaleFloat(120),
+        screenHeight - ScaleFloat(150.0f),
+        ScaleFloat(80),
+        ScaleFloat(80)
+    };
     exitBtn2.id = 10;
     exitBtn2.hovered = false;
     chooseModeButtons.push_back(exitBtn2);
@@ -321,145 +383,103 @@ void InitChooseModeMenu() {
 
 // Отрисовка главного меню
 void DrawMainMenu() {
-    // Рисуем фон
+    // Сначала очищаем экран
+    ClearBackground(BLACK);
+
     DrawTexture(backgroundTexture, 0, 0, WHITE);
+    DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.3f));
 
-    // Полупрозрачный темный слой поверх фона для лучшей читаемости текста
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.3f));
+    int titleSize = ScaleInt(50);
+    DrawText("FruityDrop", screenWidth / 2 - MeasureText("FruityDrop", titleSize) / 2, ScaleInt(80), titleSize, YELLOW);
 
-    // Заголовок игры
-    DrawText("FruityDrop", GetScreenWidth() / 2 - MeasureText("FruityDrop", 50) / 2, 80, 50, YELLOW);
-
-    // Отрисовка кнопок с текстурами
     for (size_t i = 0; i < mainMenuButtons.size(); i++) {
         MenuButton btn = mainMenuButtons[i];
-
-        // Выбор текстуры в зависимости от ID кнопки
         Texture2D textureToDraw;
+
         switch (btn.id) {
-        case 0: // Play big
-            textureToDraw = playBigTexture;
-            break;
-        case 1: // Records
-            textureToDraw = recTexture;
-            break;
-        case 2: // How to Play
-            textureToDraw = howToPlayTexture;
-            break;
-        case 3: // Exit
-            textureToDraw = exitTexture;
-            break;
+        case 0: textureToDraw = playBigTexture; break;
+        case 1: textureToDraw = recTexture; break;
+        case 2: textureToDraw = howToPlayTexture; break;
+        case 3: textureToDraw = exitTexture; break;
         }
 
-        // Рисуем текстуру кнопки
-        Color tint = btn.hovered || (selectedButton == (int)i && currentMenu == 0) ?
-            Color{ 255, 255, 200, 255 } : WHITE; // Желтоватый оттенок при наведении
+        Color tint = btn.hovered || (selectedButton == static_cast<int>(i) && currentMenu == 0) ?
+            Color{ 255, 255, 200, 255 } : WHITE;
 
         DrawTexture(textureToDraw, btn.rect.x, btn.rect.y, tint);
 
-        // Рисуем обводку при наведении
-        if (btn.hovered || (selectedButton == (int)i && currentMenu == 0)) {
+        if (btn.hovered || (selectedButton == static_cast<int>(i) && currentMenu == 0)) {
             DrawRectangleLinesEx(btn.rect, 3, GOLD);
         }
     }
 
-    // Подсказка для геймпада
     if (gamepad1.connected) {
+        int hintSize = ScaleInt(20);
         DrawText("Use D-Pad to navigate, A to select",
-            GetScreenWidth() / 2 - MeasureText("Use D-Pad to navigate, A to select", 20) / 2,
-            GetScreenHeight() - 40, 20, WHITE);
+            screenWidth / 2 - MeasureText("Use D-Pad to navigate, A to select", hintSize) / 2,
+            screenHeight - ScaleInt(40), hintSize, WHITE);
     }
 }
 
 // Отрисовка меню выбора режима
 void DrawChooseModeMenu() {
-    // Рисуем фон
+    // Сначала очищаем экран
+    ClearBackground(BLACK);
+
     DrawTexture(backgroundTexture, 0, 0, WHITE);
+    DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.3f));
 
-    // Полупрозрачный темный слой поверх фона для лучшей читаемости текста
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.3f));
+    int titleSize = ScaleInt(40);
+    DrawText("Choose Game Mode", screenWidth / 2 - MeasureText("Choose Game Mode", titleSize) / 2, ScaleInt(80), titleSize, YELLOW);
 
-    // Заголовок
-    DrawText("Choose Game Mode", GetScreenWidth() / 2 - MeasureText("Choose Game Mode", 40) / 2, 80, 40, YELLOW);
-
-    // Отрисовка кнопок режимов (первые 4 кнопки) - без текстур, только цветные прямоугольники
     for (size_t i = 0; i < 4; i++) {
         MenuButton btn = chooseModeButtons[i];
-
-        // Цвет кнопки в зависимости от режима
         Color btnColor;
         const char* btnText;
+
         switch (btn.id) {
-        case 4: // Classic
-            btnColor = Fade(GREEN, 0.8f);
-            btnText = "Classic";
-            break;
-        case 5: // Survival
-            btnColor = Fade(BLUE, 0.8f);
-            btnText = "Survival";
-            break;
-        case 6: // Time Attack
-            btnColor = Fade(ORANGE, 0.8f);
-            btnText = "Time Attack";
-            break;
-        case 7: // Two Players
-            btnColor = Fade(PURPLE, 0.8f);
-            btnText = "2 Players";
-            break;
-        default:
-            btnColor = Fade(GRAY, 0.8f);
-            btnText = "";
-            break;
+        case 4: btnColor = Fade(GREEN, 0.8f); btnText = "Classic"; break;
+        case 5: btnColor = Fade(BLUE, 0.8f); btnText = "Survival"; break;
+        case 6: btnColor = Fade(ORANGE, 0.8f); btnText = "Time Attack"; break;
+        case 7: btnColor = Fade(PURPLE, 0.8f); btnText = "2 Players"; break;
+        default: btnColor = Fade(GRAY, 0.8f); btnText = ""; break;
         }
 
-        // Если режим выбран, подсвечиваем
-        if (selectedGameMode == btn.id - 3) { // -3 потому что id начинаются с 4
+        if (selectedGameMode == btn.id - 3) {
             btnColor = GOLD;
         }
 
         DrawRectangleRec(btn.rect, btnColor);
 
-        // Текст кнопки
-        DrawText(btnText, btn.rect.x + btn.rect.width / 2 - MeasureText(btnText, 20) / 2,
-            btn.rect.y + btn.rect.height / 2 - 10, 20, WHITE);
+        int textSize = ScaleInt(20);
+        DrawText(btnText, btn.rect.x + btn.rect.width / 2 - MeasureText(btnText, textSize) / 2,
+            btn.rect.y + btn.rect.height / 2 - 10, textSize, WHITE);
 
-        // Рисуем обводку при наведении или выборе
-        if (btn.hovered || (selectedButton == (int)i && currentMenu == 1)) {
+        if (btn.hovered || (selectedButton == static_cast<int>(i) && currentMenu == 1)) {
             DrawRectangleLinesEx(btn.rect, 3, YELLOW);
         }
     }
 
-    // Отрисовка нижних кнопок (индексы 4, 5, 6) - с текстурами
     for (size_t i = 4; i < chooseModeButtons.size(); i++) {
         MenuButton btn = chooseModeButtons[i];
-
-        // Выбор текстуры в зависимости от ID кнопки
         Texture2D textureToDraw;
+
         switch (btn.id) {
-        case 8: // Большая Play
-            textureToDraw = playSmallTexture;
-            break;
-        case 9: // Records
-            textureToDraw = recTexture;
-            break;
-        case 10: // Exit
-            textureToDraw = exitTexture;
-            break;
+        case 8: textureToDraw = playSmallTexture; break;
+        case 9: textureToDraw = recTexture; break;
+        case 10: textureToDraw = exitTexture; break;
         }
 
-        // Рисуем текстуру кнопки
-        Color tint = btn.hovered || (selectedButton == (int)i && currentMenu == 1) ?
+        Color tint = btn.hovered || (selectedButton == static_cast<int>(i) && currentMenu == 1) ?
             Color{ 255, 255, 200, 255 } : WHITE;
 
         DrawTexture(textureToDraw, btn.rect.x, btn.rect.y, tint);
 
-        // Рисуем обводку при наведении или выборе
-        if (btn.hovered || (selectedButton == (int)i && currentMenu == 1)) {
+        if (btn.hovered || (selectedButton == static_cast<int>(i) && currentMenu == 1)) {
             DrawRectangleLinesEx(btn.rect, 3, GOLD);
         }
     }
 
-    // Отображение выбранного режима
     if (selectedGameMode >= 1) {
         const char* modeName = "";
         switch (selectedGameMode) {
@@ -468,70 +488,72 @@ void DrawChooseModeMenu() {
         case 3: modeName = "Time Attack Mode"; break;
         case 4: modeName = "Two Players Mode"; break;
         }
+
+        int infoSize = ScaleInt(25);
         DrawText(TextFormat("Selected: %s", modeName),
-            GetScreenWidth() / 2 - MeasureText(TextFormat("Selected: %s", modeName), 25) / 2,
-            480, 25, YELLOW);
+            screenWidth / 2 - MeasureText(TextFormat("Selected: %s", modeName), infoSize) / 2,
+            ScaleInt(480), infoSize, YELLOW);
+
+        int hintSize = ScaleInt(20);
         DrawText("Click PLAY button to start",
-            GetScreenWidth() / 2 - MeasureText("Click PLAY button to start", 20) / 2,
-            510, 20, GREEN);
+            screenWidth / 2 - MeasureText("Click PLAY button to start", hintSize) / 2,
+            ScaleInt(510), hintSize, GREEN);
     }
 
-    // Подсказка для геймпада
     if (gamepad1.connected) {
+        int hintSize = ScaleInt(20);
         DrawText("Use D-Pad to navigate, A to select, B to back",
-            GetScreenWidth() / 2 - MeasureText("Use D-Pad to navigate, A to select, B to back", 20) / 2,
-            GetScreenHeight() - 40, 20, WHITE);
+            screenWidth / 2 - MeasureText("Use D-Pad to navigate, A to select, B to back", hintSize) / 2,
+            screenHeight - ScaleInt(40), hintSize, WHITE);
     }
 }
 
-// Отрисовка таблицы рекордов с фоном
+// Отрисовка таблицы рекордов
 void DrawTopRating() {
-    // Рисуем фон
+    // Сначала очищаем экран
+    ClearBackground(BLACK);
+
     DrawTexture(backgroundTexture, 0, 0, WHITE);
+    DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.5f));
 
-    // Полупрозрачный темный слой поверх фона для лучшей читаемости текста
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.5f));
+    int titleSize = ScaleInt(40);
+    DrawText("MY BEST SCORES", screenWidth / 2 - ScaleInt(150), ScaleInt(50), titleSize, YELLOW);
 
-    DrawText("MY BEST SCORES", GetScreenWidth() / 2 - 150, 50, 40, YELLOW);
-
-    // Best score system
-    int startY = 150;
+    int startY = ScaleInt(150);
+    int modeSize = ScaleInt(30);
+    int scoreSize = ScaleInt(25);
+    int smallSize = ScaleInt(20);
 
     // Classic Mode
-    DrawText("CLASSIC MODE", GetScreenWidth() / 2 - 100, startY, 30, GREEN);
-    DrawText("Best Score:", GetScreenWidth() / 2 - 150, startY + 40, 25, WHITE);
-    DrawText(TextFormat("%d", playerScores.classicBest), GetScreenWidth() / 2 + 50, startY + 40, 25, GOLD);
+    DrawText("CLASSIC MODE", screenWidth / 2 - ScaleInt(100), startY, modeSize, GREEN);
+    DrawText("Best Score:", screenWidth / 2 - ScaleInt(150), startY + ScaleInt(40), scoreSize, WHITE);
+    DrawText(TextFormat("%d", playerScores.classicBest), screenWidth / 2 + ScaleInt(50), startY + ScaleInt(40), scoreSize, GOLD);
 
     // Survival Mode
-    DrawText("SURVIVAL MODE", GetScreenWidth() / 2 - 100, startY + 100, 30, BLUE);
-    DrawText("Best Score:", GetScreenWidth() / 2 - 150, startY + 140, 25, WHITE);
-    DrawText(TextFormat("%d", playerScores.survivalBest), GetScreenWidth() / 2 + 50, startY + 140, 25, GOLD);
+    DrawText("SURVIVAL MODE", screenWidth / 2 - ScaleInt(100), startY + ScaleInt(100), modeSize, BLUE);
+    DrawText("Best Score:", screenWidth / 2 - ScaleInt(150), startY + ScaleInt(140), scoreSize, WHITE);
+    DrawText(TextFormat("%d", playerScores.survivalBest), screenWidth / 2 + ScaleInt(50), startY + ScaleInt(140), scoreSize, GOLD);
 
     // Time Attack Mode
-    DrawText("TIME ATTACK MODE", GetScreenWidth() / 2 - 120, startY + 200, 30, ORANGE);
-    DrawText("Best Score:", GetScreenWidth() / 2 - 150, startY + 240, 25, WHITE);
-    DrawText(TextFormat("%d", playerScores.timeAttackBest), GetScreenWidth() / 2 + 50, startY + 240, 25, GOLD);
+    DrawText("TIME ATTACK MODE", screenWidth / 2 - ScaleInt(120), startY + ScaleInt(200), modeSize, ORANGE);
+    DrawText("Best Score:", screenWidth / 2 - ScaleInt(150), startY + ScaleInt(240), scoreSize, WHITE);
+    DrawText(TextFormat("%d", playerScores.timeAttackBest), screenWidth / 2 + ScaleInt(50), startY + ScaleInt(240), scoreSize, GOLD);
 
-    // Two Players Mode - splited scores for each players 
-    DrawText("TWO PLAYERS MODE", GetScreenWidth() / 2 - 120, startY + 280, 30, RED);
+    // Two Players Mode
+    DrawText("TWO PLAYERS MODE", screenWidth / 2 - ScaleInt(120), startY + ScaleInt(280), modeSize, RED);
+    DrawText("Player 1 Best:", screenWidth / 2 - ScaleInt(150), startY + ScaleInt(320), scoreSize, BLUE);
+    DrawText(TextFormat("%d", playerScores.twoPlayerBestP1), screenWidth / 2 + ScaleInt(50), startY + ScaleInt(320), scoreSize, GOLD);
+    DrawText("Player 2 Best:", screenWidth / 2 - ScaleInt(150), startY + ScaleInt(360), scoreSize, RED);
+    DrawText(TextFormat("%d", playerScores.twoPlayerBestP2), screenWidth / 2 + ScaleInt(50), startY + ScaleInt(360), scoreSize, GOLD);
 
-    // Player 1 record
-    DrawText("Player 1 Best:", GetScreenWidth() / 2 - 150, startY + 320, 25, BLUE);
-    DrawText(TextFormat("%d", playerScores.twoPlayerBestP1), GetScreenWidth() / 2 + 50, startY + 320, 25, GOLD);
-
-    // Player 2 record
-    DrawText("Player 2 Best:", GetScreenWidth() / 2 - 150, startY + 360, 25, RED);
-    DrawText(TextFormat("%d", playerScores.twoPlayerBestP2), GetScreenWidth() / 2 + 50, startY + 360, 25, GOLD);
-
-    // Stats 
-    DrawText("STATISTICS", GetScreenWidth() / 2 - 70, startY + 420, 25, PURPLE);
+    // Statistics
+    DrawText("STATISTICS", screenWidth / 2 - ScaleInt(70), startY + ScaleInt(420), scoreSize, PURPLE);
 
     int totalBest = playerScores.classicBest + playerScores.survivalBest + playerScores.timeAttackBest +
         (playerScores.twoPlayerBestP1 > playerScores.twoPlayerBestP2 ? playerScores.twoPlayerBestP1 : playerScores.twoPlayerBestP2);
 
-    DrawText(TextFormat("Total Best: %d", totalBest), GetScreenWidth() / 2 - 80, startY + 460, 20, WHITE);
+    DrawText(TextFormat("Total Best: %d", totalBest), screenWidth / 2 - ScaleInt(80), startY + ScaleInt(460), smallSize, WHITE);
 
-    // Checking for the most played mode                                                                                                                               
     std::string favoriteMode = "Classic";
     int maxScore = playerScores.classicBest;
 
@@ -549,9 +571,9 @@ void DrawTopRating() {
         favoriteMode = "Two Players";
     }
 
-    DrawText(TextFormat("Favorite Mode: %s", favoriteMode.c_str()), GetScreenWidth() / 2 - 100, startY + 490, 20, WHITE);
+    DrawText(TextFormat("Favorite Mode: %s", favoriteMode.c_str()), screenWidth / 2 - ScaleInt(100), startY + ScaleInt(490), smallSize, WHITE);
 
-    DrawText("Press Q to return", GetScreenWidth() / 2 - 100, GetScreenHeight() - 50, 20, WHITE);
+    DrawText("Press Q to return", screenWidth / 2 - ScaleInt(100), screenHeight - ScaleInt(50), smallSize, WHITE);
 }
 
 // Обработка навигации по меню с геймпада
@@ -567,22 +589,18 @@ void UpdateMenuNavigation() {
         // Навигация вверх/вниз
         if (IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_UP)) {
             if (currentMenu == 0) {
-                // В главном меню: большая кнопка (0) и маленькие (1-3)
                 if (selectedButton == 0) selectedButton = 1;
                 else if (selectedButton >= 1 && selectedButton <= 3) selectedButton = 0;
             }
             else {
-                // В меню выбора режима
                 if (selectedButton >= 0 && selectedButton <= 3) {
-                    // Из режимов в нижние кнопки
-                    if (selectedButton < 2) selectedButton = 4; // К Play
-                    else selectedButton = 6; // К Exit
+                    if (selectedButton < 2) selectedButton = 4;
+                    else selectedButton = 6;
                 }
                 else if (selectedButton >= 4 && selectedButton <= 6) {
-                    // Из нижних кнопок в режимы
-                    if (selectedButton == 4) selectedButton = 0; // Play -> Classic
-                    else if (selectedButton == 5) selectedButton = 1; // Rec -> Survival
-                    else if (selectedButton == 6) selectedButton = 2; // Exit -> Time Attack
+                    if (selectedButton == 4) selectedButton = 0;
+                    else if (selectedButton == 5) selectedButton = 1;
+                    else if (selectedButton == 6) selectedButton = 2;
                 }
             }
             moved = true;
@@ -617,15 +635,13 @@ void UpdateMenuNavigation() {
             }
             else {
                 if (selectedButton >= 0 && selectedButton <= 3) {
-                    // Между режимами в ряду
-                    if (selectedButton == 0 || selectedButton == 2) selectedButton++; // Вправо
-                    else if (selectedButton == 1 || selectedButton == 3) selectedButton--; // Влево
+                    if (selectedButton == 0 || selectedButton == 2) selectedButton++;
+                    else if (selectedButton == 1 || selectedButton == 3) selectedButton--;
                 }
                 else if (selectedButton >= 4 && selectedButton <= 6) {
-                    // Между нижними кнопками
-                    if (selectedButton == 4) selectedButton = 6; // Play -> Exit
-                    else if (selectedButton == 5) selectedButton = 4; // Rec -> Play
-                    else if (selectedButton == 6) selectedButton = 5; // Exit -> Rec
+                    if (selectedButton == 4) selectedButton = 6;
+                    else if (selectedButton == 5) selectedButton = 4;
+                    else if (selectedButton == 6) selectedButton = 5;
                 }
             }
             moved = true;
@@ -655,48 +671,40 @@ void UpdateMenuNavigation() {
         // Кнопка A - выбор
         if (IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_RIGHT_FACE_DOWN)) {
             if (currentMenu == 0) {
-                if (selectedButton >= 0 && selectedButton < (int)mainMenuButtons.size()) {
+                if (selectedButton >= 0 && selectedButton < static_cast<int>(mainMenuButtons.size())) {
                     MenuButton btn = mainMenuButtons[selectedButton];
 
-                    // Кнопка Play
                     if (btn.id == 0) {
                         currentMenu = 1;
                         InitChooseModeMenu();
                         selectedButton = 0;
                     }
-                    // Кнопка Records
                     else if (btn.id == 1) {
                         showTopRating = true;
                     }
-                    // Кнопка How to Play (пока просто возвращаем в меню)
                     else if (btn.id == 2) {
-                        // В будущем можно добавить экран How to Play
+                        // How to Play
                     }
-                    // Кнопка Exit
                     else if (btn.id == 3) {
-                        gameMode = 5; // Выход из игры
+                        gameMode = 5;
                     }
                 }
             }
             else {
-                if (selectedButton >= 0 && selectedButton < (int)chooseModeButtons.size()) {
+                if (selectedButton >= 0 && selectedButton < static_cast<int>(chooseModeButtons.size())) {
                     MenuButton btn = chooseModeButtons[selectedButton];
 
-                    // Кнопки режимов (4-7)
                     if (btn.id >= 4 && btn.id <= 7) {
-                        selectedGameMode = btn.id - 3; // -3 потому что id начинаются с 4
+                        selectedGameMode = btn.id - 3;
                     }
-                    // Большая кнопка Play
                     else if (btn.id == 8) {
                         if (selectedGameMode >= 1) {
-                            gameMode = selectedGameMode; // Начинаем игру в выбранном режиме
+                            gameMode = selectedGameMode;
                         }
                     }
-                    // Кнопка Records
                     else if (btn.id == 9) {
                         showTopRating = true;
                     }
-                    // Кнопка Exit
                     else if (btn.id == 10) {
                         currentMenu = 0;
                         InitMainMenu();
@@ -734,22 +742,18 @@ void UpdateMenuMouse() {
                 if (CheckCollisionPointRec(mousePoint, mainMenuButtons[i].rect)) {
                     MenuButton btn = mainMenuButtons[i];
 
-                    // Кнопка Play
                     if (btn.id == 0) {
                         currentMenu = 1;
                         InitChooseModeMenu();
                     }
-                    // Кнопка Records
                     else if (btn.id == 1) {
                         showTopRating = true;
                     }
-                    // Кнопка How to Play
                     else if (btn.id == 2) {
-                        // В будущем можно добавить экран How to Play
+                        // How to Play
                     }
-                    // Кнопка Exit
                     else if (btn.id == 3) {
-                        gameMode = 5; // Выход из игры
+                        gameMode = 5;
                     }
                     break;
                 }
@@ -766,21 +770,17 @@ void UpdateMenuMouse() {
                 if (CheckCollisionPointRec(mousePoint, chooseModeButtons[i].rect)) {
                     MenuButton btn = chooseModeButtons[i];
 
-                    // Кнопки режимов (4-7)
                     if (btn.id >= 4 && btn.id <= 7) {
-                        selectedGameMode = btn.id - 3; // -3 потому что id начинаются с 4
+                        selectedGameMode = btn.id - 3;
                     }
-                    // Большая кнопка Play
                     else if (btn.id == 8) {
                         if (selectedGameMode >= 1) {
-                            gameMode = selectedGameMode; // Начинаем игру в выбранном режиме
+                            gameMode = selectedGameMode;
                         }
                     }
-                    // Кнопка Records
                     else if (btn.id == 9) {
                         showTopRating = true;
                     }
-                    // Кнопка Exit
                     else if (btn.id == 10) {
                         currentMenu = 0;
                         InitMainMenu();
@@ -792,34 +792,25 @@ void UpdateMenuMouse() {
     }
 }
 
-// ============ Остальные функции остаются как в вашем оригинальном коде ============
-
-// For gamepads 
+// Для геймпадов 
 void CheckGamepads() {
-    //verifying the gamepads connection  
     gamepad1.connected = IsGamepadAvailable(gamepad1.gamepadNumber);
     gamepad2.connected = IsGamepadAvailable(gamepad2.gamepadNumber);
 
-    if (gamepad1.connected) {
-        // Verifying gamepads buttons
-        if (IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {
-            gamepad1.useLeftStick = !gamepad1.useLeftStick;
-        }
+    if (gamepad1.connected && IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {
+        gamepad1.useLeftStick = !gamepad1.useLeftStick;
     }
 
-    if (gamepad2.connected) {
-        if (IsGamepadButtonPressed(gamepad2.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {
-            gamepad2.useLeftStick = !gamepad2.useLeftStick;
-        }
+    if (gamepad2.connected && IsGamepadButtonPressed(gamepad2.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {
+        gamepad2.useLeftStick = !gamepad2.useLeftStick;
     }
 }
 
 void MoveRectangleWithGamepad(Rectangle& rec, GamepadController& gamepad, int playerSide = 0) {
     if (!gamepad.connected) return;
 
-    float moveSpeed = 20.0f;
+    float moveSpeed = 20.0f * scaleX;
     Vector2 stickAxis = { 0, 0 };
-
 
     if (gamepad.useLeftStick) {
         stickAxis.x = GetGamepadAxisMovement(gamepad.gamepadNumber, GAMEPAD_AXIS_LEFT_X);
@@ -828,11 +819,9 @@ void MoveRectangleWithGamepad(Rectangle& rec, GamepadController& gamepad, int pl
         stickAxis.x = GetGamepadAxisMovement(gamepad.gamepadNumber, GAMEPAD_AXIS_RIGHT_X);
     }
 
-
     if (fabs(stickAxis.x) > 0.2f) {
         rec.x += stickAxis.x * moveSpeed;
     }
-
 
     if (IsGamepadButtonDown(gamepad.gamepadNumber, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) {
         rec.x -= moveSpeed;
@@ -841,53 +830,49 @@ void MoveRectangleWithGamepad(Rectangle& rec, GamepadController& gamepad, int pl
         rec.x += moveSpeed;
     }
 
-    // Splited screen for 2 Players modes 
     if (gameMode == 4) {
-        if (playerSide == 1) { // Player 1 - Left Side 
+        if (playerSide == 1) {
             if (rec.x < 0) rec.x = 0;
-            if (rec.x + rec.width > GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2 - rec.width;
+            if (rec.x + rec.width > screenWidth / 2) rec.x = screenWidth / 2 - rec.width;
         }
-        else if (playerSide == 2) { // Player 2 - Right Side 
-            if (rec.x < GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2;
-            if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
+        else if (playerSide == 2) {
+            if (rec.x < screenWidth / 2) rec.x = screenWidth / 2;
+            if (rec.x + rec.width > screenWidth) rec.x = screenWidth - rec.width;
         }
     }
     else {
-
-        if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
+        if (rec.x + rec.width > screenWidth) rec.x = screenWidth - rec.width;
         if (rec.x < 0) rec.x = 0;
     }
 }
 
 void DrawGamepadInfo() {
     if (gameMode == 4) {
-        int infoFontSize = 18 * GetScreenWidth() / 1920;
+        int infoFontSize = ScaleInt(18);
 
-        // Gamepads info for player 1
         if (gamepad1.connected) {
-            DrawText("Gamepad 1: Connected", 20, GetScreenHeight() - 60, infoFontSize, GREEN);
-            DrawText(TextFormat("Stick: %s", gamepad1.useLeftStick ? "LEFT" : "RIGHT"), 20, GetScreenHeight() - 40, infoFontSize - 2, WHITE);
-            DrawText("Press X to switch", 20, GetScreenHeight() - 20, infoFontSize - 2, YELLOW);
+            DrawText("Gamepad 1: Connected", ScaleInt(20), screenHeight - ScaleInt(60), infoFontSize, GREEN);
+            DrawText(TextFormat("Stick: %s", gamepad1.useLeftStick ? "LEFT" : "RIGHT"), ScaleInt(20), screenHeight - ScaleInt(40), infoFontSize - 2, WHITE);
+            DrawText("Press X to switch", ScaleInt(20), screenHeight - ScaleInt(20), infoFontSize - 2, YELLOW);
         }
         else {
-            DrawText("Gamepad 1: Not Connected", 40, GetScreenHeight() - 60, infoFontSize, RED);
-            DrawText("Use A/D keys", 20, GetScreenHeight() - 20, infoFontSize - 2, WHITE);
+            DrawText("Gamepad 1: Not Connected", ScaleInt(40), screenHeight - ScaleInt(60), infoFontSize, RED);
+            DrawText("Use A/D keys", ScaleInt(20), screenHeight - ScaleInt(20), infoFontSize - 2, WHITE);
         }
 
-        // Gamepads info for player 2
         if (gamepad2.connected) {
-            DrawText("Gamepad 2: Connected", GetScreenWidth() - 200, GetScreenHeight() - 60, infoFontSize, GREEN);
-            DrawText(TextFormat("Stick: %s", gamepad2.useLeftStick ? "LEFT" : "RIGHT"), GetScreenWidth() - 200, GetScreenHeight() - 40, infoFontSize - 2, WHITE);
-            DrawText("Press X to switch", GetScreenWidth() - 200, GetScreenHeight() - 20, infoFontSize - 2, YELLOW);
+            DrawText("Gamepad 2: Connected", screenWidth - ScaleInt(200), screenHeight - ScaleInt(60), infoFontSize, GREEN);
+            DrawText(TextFormat("Stick: %s", gamepad2.useLeftStick ? "LEFT" : "RIGHT"), screenWidth - ScaleInt(200), screenHeight - ScaleInt(40), infoFontSize - 2, WHITE);
+            DrawText("Press X to switch", screenWidth - ScaleInt(200), screenHeight - ScaleInt(20), infoFontSize - 2, YELLOW);
         }
         else {
-            DrawText("Gamepad 2: Not Connected", GetScreenWidth() - 260, GetScreenHeight() - 60, infoFontSize, RED);
-            DrawText("Use Arrow keys", GetScreenWidth() - 200, GetScreenHeight() - 20, infoFontSize - 2, WHITE);
+            DrawText("Gamepad 2: Not Connected", screenWidth - ScaleInt(260), screenHeight - ScaleInt(60), infoFontSize, RED);
+            DrawText("Use Arrow keys", screenWidth - ScaleInt(200), screenHeight - ScaleInt(20), infoFontSize - 2, WHITE);
         }
     }
 }
 
-// score system 
+// Score system 
 void LoadPlayerScores() {
     playerScores.classicBest = 0;
     playerScores.survivalBest = 0;
@@ -917,41 +902,36 @@ void SavePlayerScore(int score, const std::string& mode, int playerNumber = 0) {
 }
 
 void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
-    float moveSpeed = 20.0f;
+    float moveSpeed = 20.0f * scaleX;
 
-    // Increased move speed for speed bonus fruit 
     if (gameMode == 4) {
-        // Individual bonus for 2 Players Mode 
         if (playerSide == 1 && player1.bonuses.speedBoostActive) {
-            moveSpeed = 25.0f;
+            moveSpeed = 25.0f * scaleX;
         }
         else if (playerSide == 2 && player2.bonuses.speedBoostActive) {
-            moveSpeed = 25.0f;
+            moveSpeed = 25.0f * scaleX;
         }
     }
     else {
-        // В одиночных режимах глобальные бонусы
         if (speedBoostActive) {
-            moveSpeed = 25.0f;
+            moveSpeed = 25.0f * scaleX;
         }
     }
 
-    // Slow Motion Bonus system 
     if (gameMode == 4) {
         if (playerSide == 1 && player1.bonuses.slowMotionActive) {
-            moveSpeed = 20.0f;
+            moveSpeed = 20.0f * scaleX;
         }
         else if (playerSide == 2 && player2.bonuses.slowMotionActive) {
-            moveSpeed = 20.0f;
+            moveSpeed = 20.0f * scaleX;
         }
     }
     else {
         if (slowMotionActive) {
-            moveSpeed = 20.0f;
+            moveSpeed = 20.0f * scaleX;
         }
     }
 
-    // Управление с клавиатуры (как резерв)
     if ((useArrowKeys && IsKeyDown(KEY_LEFT)) || (!useArrowKeys && IsKeyDown(KEY_A))) {
         rec.x -= moveSpeed;
     }
@@ -959,65 +939,58 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
         rec.x += moveSpeed;
     }
 
-    // Ограничения для разделенного экрана в режиме двух игроков
     if (gameMode == 4) {
-        if (playerSide == 1) { // Player 1 - Left side
+        if (playerSide == 1) {
             if (rec.x < 0) rec.x = 0;
-            if (rec.x + rec.width > GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2 - rec.width;
+            if (rec.x + rec.width > screenWidth / 2) rec.x = screenWidth / 2 - rec.width;
         }
-        else if (playerSide == 2) { // Player 2 - Right side 
-            if (rec.x < GetScreenWidth() / 2) rec.x = GetScreenWidth() / 2;
-            if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
+        else if (playerSide == 2) {
+            if (rec.x < screenWidth / 2) rec.x = screenWidth / 2;
+            if (rec.x + rec.width > screenWidth) rec.x = screenWidth - rec.width;
         }
     }
     else {
-        // 
-        if (rec.x + rec.width > GetScreenWidth()) rec.x = GetScreenWidth() - rec.width;
+        if (rec.x + rec.width > screenWidth) rec.x = screenWidth - rec.width;
         if (rec.x < 0) rec.x = 0;
     }
 }
 
 Fruit CreateFruit(int playerSide = 0) {
     Fruit fruit;
+    fruitSize = ScaleInt(60);
 
-    if (playerSide == 1) { // For player 1 left side 
-        fruit.rect = { (float)GetRandomValue(50, GetScreenWidth() / 2 - 100), -50, (float)fruitSize, (float)fruitSize };
+    if (playerSide == 1) {
+        fruit.rect = { static_cast<float>(GetRandomValue(ScaleInt(50), screenWidth / 2 - ScaleInt(100))), -ScaleFloat(50), static_cast<float>(fruitSize), static_cast<float>(fruitSize) };
     }
-    else if (playerSide == 2) { // For player 2 right side 
-        fruit.rect = { (float)GetRandomValue(GetScreenWidth() / 2 + 50, GetScreenWidth() - 100), -50, (float)fruitSize, (float)fruitSize };
+    else if (playerSide == 2) {
+        fruit.rect = { static_cast<float>(GetRandomValue(screenWidth / 2 + ScaleInt(50), screenWidth - ScaleInt(100))), -ScaleFloat(50), static_cast<float>(fruitSize), static_cast<float>(fruitSize) };
     }
-    else { // Для одиночных режимов
-        fruit.rect = { (float)GetRandomValue(50, GetScreenWidth() - 100), -50, (float)fruitSize, (float)fruitSize };
+    else {
+        fruit.rect = { static_cast<float>(GetRandomValue(ScaleInt(50), screenWidth - ScaleInt(100))), -ScaleFloat(50), static_cast<float>(fruitSize), static_cast<float>(fruitSize) };
     }
-
 
     int randomChance = GetRandomValue(0, 100);
 
-    // Редкий шанс появления бонусного фрукта (8%)
     if (randomChance < 8) {
-
-        if (gameMode == 2) { // Survival - более полезные бонусы
-            fruit.type = GetRandomValue(6, 8); // Slow motion, Double points, Extra life
+        if (gameMode == 2) {
+            fruit.type = GetRandomValue(6, 8);
         }
-        else if (gameMode == 3) { // Time Attack - бонусы времени
-            fruit.type = GetRandomValue(9, 10); // Time bonus, Speed boost
+        else if (gameMode == 3) {
+            fruit.type = GetRandomValue(9, 10);
         }
-        else { // Classic и Two Players - случайные бонусы
+        else {
             fruit.type = GetRandomValue(6, 10);
         }
     }
-    else if (randomChance < 35) { // 27% шанс для плохих фруктов
+    else if (randomChance < 35) {
         fruit.type = GetRandomValue(4, 5);
     }
-    else { // 65% шанс для хороших фруктов
+    else {
         fruit.type = GetRandomValue(0, 3);
     }
 
     fruit.active = true;
-
-    // Базовая скорость с учетом активных эффектов
     float baseSpeed = fruitSpeed + GetRandomValue(0, 2);
-
 
     if (gameMode == 4) {
         if (playerSide == 1 && player1.bonuses.freezeActive) baseSpeed = 0.5f;
@@ -1028,15 +1001,13 @@ Fruit CreateFruit(int playerSide = 0) {
         }
     }
     else {
-        // В одиночных режимах глобальные эффекты
         if (slowMotionActive) baseSpeed *= 0.4f;
         if (speedBoostActive) baseSpeed *= 1.3f;
         if (freezeActive) baseSpeed = 0.5f;
     }
 
-    fruit.speed = baseSpeed * GetScreenHeight() / 1080.0f; // Масштабируем скорость под разрешение
+    fruit.speed = baseSpeed * scaleY;
 
-    // Цвета и длительность эффектов
     switch (fruit.type) {
     case 0: fruit.color = RED; break;
     case 1: fruit.color = YELLOW; break;
@@ -1053,96 +1024,64 @@ Fruit CreateFruit(int playerSide = 0) {
     case 12: fruit.color = ORANGE; break;
     }
 
-    fruit.effectDuration = 5.0f; // 5 секунд для бонусных эффектов
-
+    fruit.effectDuration = 5.0f;
     return fruit;
 }
 
 void UpdateBonusEffects() {
-    // Timer update for bonus 
     if (slowMotionActive) {
         slowMotionTimer -= GetFrameTime();
-        if (slowMotionTimer <= 0) {
-            slowMotionActive = false;
-        }
+        if (slowMotionTimer <= 0) slowMotionActive = false;
     }
-
     if (doublePointsActive) {
         doublePointsTimer -= GetFrameTime();
-        if (doublePointsTimer <= 0) {
-            doublePointsActive = false;
-        }
+        if (doublePointsTimer <= 0) doublePointsActive = false;
     }
-
     if (freezeActive) {
         freezeTimer -= GetFrameTime();
-        if (freezeTimer <= 0) {
-            freezeActive = false;
-        }
+        if (freezeTimer <= 0) freezeActive = false;
     }
-
     if (speedBoostActive) {
         speedBoostTimer -= GetFrameTime();
-        if (speedBoostTimer <= 0) {
-            speedBoostActive = false;
-        }
+        if (speedBoostTimer <= 0) speedBoostActive = false;
     }
 
-    // Timer bonus update for 2 players 
     if (gameMode == 4) {
-        // Player 1
         if (player1.isAlive) {
             if (player1.bonuses.slowMotionActive) {
                 player1.bonuses.slowMotionTimer -= GetFrameTime();
-                if (player1.bonuses.slowMotionTimer <= 0) {
-                    player1.bonuses.slowMotionActive = false;
-                }
+                if (player1.bonuses.slowMotionTimer <= 0) player1.bonuses.slowMotionActive = false;
             }
             if (player1.bonuses.doublePointsActive) {
                 player1.bonuses.doublePointsTimer -= GetFrameTime();
-                if (player1.bonuses.doublePointsTimer <= 0) {
-                    player1.bonuses.doublePointsActive = false;
-                }
+                if (player1.bonuses.doublePointsTimer <= 0) player1.bonuses.doublePointsActive = false;
             }
             if (player1.bonuses.freezeActive) {
                 player1.bonuses.freezeTimer -= GetFrameTime();
-                if (player1.bonuses.freezeTimer <= 0) {
-                    player1.bonuses.freezeActive = false;
-                }
+                if (player1.bonuses.freezeTimer <= 0) player1.bonuses.freezeActive = false;
             }
             if (player1.bonuses.speedBoostActive) {
                 player1.bonuses.speedBoostTimer -= GetFrameTime();
-                if (player1.bonuses.speedBoostTimer <= 0) {
-                    player1.bonuses.speedBoostActive = false;
-                }
+                if (player1.bonuses.speedBoostTimer <= 0) player1.bonuses.speedBoostActive = false;
             }
         }
 
-        // Player 2
         if (player2.isAlive) {
             if (player2.bonuses.slowMotionActive) {
                 player2.bonuses.slowMotionTimer -= GetFrameTime();
-                if (player2.bonuses.slowMotionTimer <= 0) {
-                    player2.bonuses.slowMotionActive = false;
-                }
+                if (player2.bonuses.slowMotionTimer <= 0) player2.bonuses.slowMotionActive = false;
             }
             if (player2.bonuses.doublePointsActive) {
                 player2.bonuses.doublePointsTimer -= GetFrameTime();
-                if (player2.bonuses.doublePointsTimer <= 0) {
-                    player2.bonuses.doublePointsActive = false;
-                }
+                if (player2.bonuses.doublePointsTimer <= 0) player2.bonuses.doublePointsActive = false;
             }
             if (player2.bonuses.freezeActive) {
                 player2.bonuses.freezeTimer -= GetFrameTime();
-                if (player2.bonuses.freezeTimer <= 0) {
-                    player2.bonuses.freezeActive = false;
-                }
+                if (player2.bonuses.freezeTimer <= 0) player2.bonuses.freezeActive = false;
             }
             if (player2.bonuses.speedBoostActive) {
                 player2.bonuses.speedBoostTimer -= GetFrameTime();
-                if (player2.bonuses.speedBoostTimer <= 0) {
-                    player2.bonuses.speedBoostActive = false;
-                }
+                if (player2.bonuses.speedBoostTimer <= 0) player2.bonuses.speedBoostActive = false;
             }
         }
     }
@@ -1150,24 +1089,23 @@ void UpdateBonusEffects() {
 
 void ApplyBonusEffect(int bonusType, int playerNumber = 0) {
     if (gameMode == 4) {
-        // В режиме двух игроков бонусы индивидуально
         if (playerNumber == 1 && player1.isAlive) {
             switch (bonusType) {
-            case 6: // Замедление времени
+            case 6:
                 player1.bonuses.slowMotionActive = true;
                 player1.bonuses.slowMotionTimer = 7.0f;
                 break;
-            case 7: // Двойные очки
+            case 7:
                 player1.bonuses.doublePointsActive = true;
                 player1.bonuses.doublePointsTimer = 10.0f;
                 break;
-            case 8: // Дополнительная жизнь
+            case 8:
                 if (player1.lives < 5) player1.lives++;
                 break;
-            case 9: // Бонус времени
+            case 9:
                 gameTime += 10.0f;
                 break;
-            case 10: // Ускорение
+            case 10:
                 player1.bonuses.speedBoostActive = true;
                 player1.bonuses.speedBoostTimer = 6.0f;
                 break;
@@ -1175,21 +1113,21 @@ void ApplyBonusEffect(int bonusType, int playerNumber = 0) {
         }
         else if (playerNumber == 2 && player2.isAlive) {
             switch (bonusType) {
-            case 6: // Замедление времени
+            case 6:
                 player2.bonuses.slowMotionActive = true;
                 player2.bonuses.slowMotionTimer = 7.0f;
                 break;
-            case 7: // Двойные очки
+            case 7:
                 player2.bonuses.doublePointsActive = true;
                 player2.bonuses.doublePointsTimer = 10.0f;
                 break;
-            case 8: // Дополнительная жизнь
+            case 8:
                 if (player2.lives < 5) player2.lives++;
                 break;
-            case 9: // Бонус времени
+            case 9:
                 gameTime += 10.0f;
                 break;
-            case 10: // Ускорение
+            case 10:
                 player2.bonuses.speedBoostActive = true;
                 player2.bonuses.speedBoostTimer = 6.0f;
                 break;
@@ -1197,23 +1135,22 @@ void ApplyBonusEffect(int bonusType, int playerNumber = 0) {
         }
     }
     else {
-        // В одиночных режимах глобальные бонусы
         switch (bonusType) {
-        case 6: // Замедление времени
+        case 6:
             slowMotionActive = true;
             slowMotionTimer = 7.0f;
             break;
-        case 7: // Двойные очки
+        case 7:
             doublePointsActive = true;
             doublePointsTimer = 10.0f;
             break;
-        case 8: // Дополнительная жизнь
+        case 8:
             if (player1.lives < 5) player1.lives++;
             break;
-        case 9: // Бонус времени
+        case 9:
             gameTime += 10.0f;
             break;
-        case 10: // Ускорение
+        case 10:
             speedBoostActive = true;
             speedBoostTimer = 6.0f;
             break;
@@ -1224,20 +1161,17 @@ void ApplyBonusEffect(int bonusType, int playerNumber = 0) {
 void UpdateFruits(std::vector<Fruit>& fruits) {
     for (auto& fruit : fruits) {
         if (fruit.active) {
-            // Применяем активные эффекты к скорости падения
             float currentSpeed = fruit.speed;
 
             if (gameMode == 4) {
-                // В режиме двух игроков учитываем индивидуальные эффекты заморозки
-                if (fruit.rect.x < GetScreenWidth() / 2 && player1.bonuses.freezeActive) {
+                if (fruit.rect.x < screenWidth / 2 && player1.bonuses.freezeActive) {
                     currentSpeed = 0.5f;
                 }
-                else if (fruit.rect.x >= GetScreenWidth() / 2 && player2.bonuses.freezeActive) {
+                else if (fruit.rect.x >= screenWidth / 2 && player2.bonuses.freezeActive) {
                     currentSpeed = 0.5f;
                 }
             }
             else {
-                // В одиночных режимах используем глобальные эффекты
                 if (freezeActive) {
                     currentSpeed = 0.5f;
                 }
@@ -1245,59 +1179,54 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
 
             fruit.rect.y += currentSpeed;
 
-            // Проверяем столкновение с корзинами игроков
             bool collision = false;
 
-            if (gameMode == 4) { // Режим двух игроков
+            if (gameMode == 4) {
                 if (player1.isAlive && CheckCollisionRecs(fruit.rect, player1.basket)) {
                     collision = true;
-                    if (fruit.type <= 3) { // Хорошие фрукты
+                    if (fruit.type <= 3) {
                         int points = 100;
                         if (player1.bonuses.doublePointsActive) points *= 2;
                         player1.score += points;
                     }
-                    else if (fruit.type <= 5) { // Плохие предметы
+                    else if (fruit.type <= 5) {
                         player1.lives--;
-                        if (player1.lives <= 0) {
-                            player1.isAlive = false;
-                        }
+                        if (player1.lives <= 0) player1.isAlive = false;
                     }
-                    else { // Бонусные фрукты
+                    else {
                         ApplyBonusEffect(fruit.type, 1);
                         player1.score += 200;
                     }
                 }
                 else if (player2.isAlive && CheckCollisionRecs(fruit.rect, player2.basket)) {
                     collision = true;
-                    if (fruit.type <= 3) { // Хорошие фрукты
+                    if (fruit.type <= 3) {
                         int points = 100;
                         if (player2.bonuses.doublePointsActive) points *= 2;
                         player2.score += points;
                     }
-                    else if (fruit.type <= 5) { // Плохие предметы
+                    else if (fruit.type <= 5) {
                         player2.lives--;
-                        if (player2.lives <= 0) {
-                            player2.isAlive = false;
-                        }
+                        if (player2.lives <= 0) player2.isAlive = false;
                     }
-                    else { // Бонусные фрукты
+                    else {
                         ApplyBonusEffect(fruit.type, 2);
                         player2.score += 200;
                     }
                 }
             }
-            else { // Одиночные режимы (Classic, Survival, Time Attack)
+            else {
                 if (CheckCollisionRecs(fruit.rect, player1.basket)) {
                     collision = true;
-                    if (fruit.type <= 3) { // Хорошие фрукты
+                    if (fruit.type <= 3) {
                         int points = 100;
                         if (doublePointsActive) points *= 2;
                         player1.score += points;
                     }
-                    else if (fruit.type <= 5) { // Плохие предметы
+                    else if (fruit.type <= 5) {
                         player1.lives--;
                     }
-                    else { // Бонусные фрукты
+                    else {
                         ApplyBonusEffect(fruit.type);
                         player1.score += 200;
                     }
@@ -1308,26 +1237,19 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
                 fruit.active = false;
             }
 
-            // Проверка пропущенных фруктов для ВСЕХ режимов
-            if (fruit.rect.y > GetScreenHeight()) {
-                if (fruit.type <= 3) { // Только хорошие фрукты считаются как пропущенные
+            if (fruit.rect.y > screenHeight) {
+                if (fruit.type <= 3) {
                     if (gameMode == 4) {
-                        // Определяем, какой игрок пропустил фрукт
-                        if (fruit.rect.x < GetScreenWidth() / 2 && player1.isAlive) {
+                        if (fruit.rect.x < screenWidth / 2 && player1.isAlive) {
                             player1.missedFruits++;
-                            if (player1.missedFruits >= 10) {
-                                player1.isAlive = false;
-                            }
+                            if (player1.missedFruits >= 10) player1.isAlive = false;
                         }
-                        else if (fruit.rect.x >= GetScreenWidth() / 2 && player2.isAlive) {
+                        else if (fruit.rect.x >= screenWidth / 2 && player2.isAlive) {
                             player2.missedFruits++;
-                            if (player2.missedFruits >= 10) {
-                                player2.isAlive = false;
-                            }
+                            if (player2.missedFruits >= 10) player2.isAlive = false;
                         }
                     }
                     else {
-                        // Для всех одиночных режимов (Classic, Survival, Time Attack)
                         player1.missedFruits++;
                     }
                 }
@@ -1336,8 +1258,7 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
         }
     }
 
-    // Remove inactive fruits
-    for (int i = fruits.size() - 1; i >= 0; i--) {
+    for (int i = static_cast<int>(fruits.size()) - 1; i >= 0; i--) {
         if (!fruits[i].active) {
             fruits.erase(fruits.begin() + i);
         }
@@ -1347,55 +1268,23 @@ void UpdateFruits(std::vector<Fruit>& fruits) {
 void DrawFruits(const std::vector<Fruit>& fruits) {
     for (const auto& fruit : fruits) {
         if (fruit.active) {
-            //DrawRectangleRec(fruit.rect, fruit.color);
-            switch (fruit.type)
-            {
-            case 0:
-                DrawTexture(Fruit0Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 1:
-                DrawTexture(Fruit1Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 2:
-                DrawTexture(Fruit2Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 3:
-                DrawTexture(Fruit3Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 4:
-                DrawTexture(Fruit4Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 5:
-                DrawTexture(Fruit5Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 6:
-                DrawTexture(Fruit6Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 7:
-                DrawTexture(Fruit7Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 8:
-                DrawTexture(Fruit8Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 9:
-                DrawTexture(Fruit9Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 10:
-                DrawTexture(Fruit10Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 11:
-                DrawTexture(Fruit11Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            case 12:
-                DrawTexture(Fruit12Texture, fruit.rect.x, fruit.rect.y, RAYWHITE);
-                break;
-            default:
-                break;
+            Texture2D textureToDraw = Fruit0Texture;
+            switch (fruit.type) {
+            case 0: textureToDraw = Fruit0Texture; break;
+            case 1: textureToDraw = Fruit1Texture; break;
+            case 2: textureToDraw = Fruit2Texture; break;
+            case 3: textureToDraw = Fruit3Texture; break;
+            case 4: textureToDraw = Fruit4Texture; break;
+            case 5: textureToDraw = Fruit5Texture; break;
+            case 6: textureToDraw = Fruit6Texture; break;
+            case 7: textureToDraw = Fruit7Texture; break;
+            case 8: textureToDraw = Fruit8Texture; break;
+            case 9: textureToDraw = Fruit9Texture; break;
+            case 10: textureToDraw = Fruit10Texture; break;
+            case 11: textureToDraw = Fruit11Texture; break;
+            case 12: textureToDraw = Fruit12Texture; break;
             }
-
-            if (fruit.type >= 6) {
-
-            }
+            DrawTexture(textureToDraw, fruit.rect.x, fruit.rect.y, RAYWHITE);
         }
     }
 }
@@ -1405,33 +1294,43 @@ void ResetGame() {
     gameTime = 120.0f;
     fruitSpeed = 2.0f;
     spawnRate = 1.0f;
-    gameStarted = false; // Игра не начата до нажатия SPACE
+    gameStarted = false;
 
-    // Инициализация игроков с масштабированием под разрешение
-    int basketWidth = 100 * GetScreenWidth() / 1920;
-    int basketHeight = 60 * GetScreenHeight() / 1080;
+    UpdateScale();
 
-    player1.basket = { GetScreenWidth() / 4.0f - basketWidth / 2, GetScreenHeight() - 100.0f, (float)basketWidth, (float)basketHeight };
+    int basketWidth = ScaleInt(100);
+    int basketHeight = ScaleInt(60);
+    // Корзины должны быть в самом низу экрана
+    int basketYPos = screenHeight - basketHeight - ScaleIntY(50);
+
+    player1.basket = {
+        screenWidth / 4.0f - basketWidth / 2,
+        static_cast<float>(basketYPos),
+        static_cast<float>(basketWidth),
+        static_cast<float>(basketHeight)
+    };
     player1.score = 0;
     player1.lives = 3;
     player1.missedFruits = 0;
     player1.name = "Player 1";
     player1.color = BLUE;
     player1.isAlive = true;
-    // Сброс бонусов игрока 1
     player1.bonuses = PlayerBonusEffects();
 
-    player2.basket = { 3 * GetScreenWidth() / 4.0f - basketWidth / 2, GetScreenHeight() - 100.0f, (float)basketWidth, (float)basketHeight };
+    player2.basket = {
+        3 * screenWidth / 4.0f - basketWidth / 2,
+        static_cast<float>(basketYPos),
+        static_cast<float>(basketWidth),
+        static_cast<float>(basketHeight)
+    };
     player2.score = 0;
     player2.lives = 3;
     player2.missedFruits = 0;
     player2.name = "Player 2";
     player2.color = RED;
     player2.isAlive = true;
-    // Сброс бонусов игрока 2
     player2.bonuses = PlayerBonusEffects();
 
-    // Сбрасываем все глобальные бонусные эффекты
     slowMotionActive = false;
     doublePointsActive = false;
     freezeActive = false;
@@ -1444,121 +1343,284 @@ void ResetGame() {
 
 void ToggleFullscreen() {
     if (fullscreen) {
-        SetWindowSize(screenWidth, screenHeight);
-        ToggleFullscreen();
+        // Переключаемся в оконный режим
+        SetWindowSize(baseWidth, baseHeight);
+        SetWindowPosition(GetMonitorWidth(0) / 2 - baseWidth / 2, GetMonitorHeight(0) / 2 - baseHeight / 2);
+        screenWidth = baseWidth;
+        screenHeight = baseHeight;
         fullscreen = false;
     }
     else {
+        // Переключаемся в полноэкранный режим
         int monitor = GetCurrentMonitor();
         int monitorWidth = GetMonitorWidth(monitor);
         int monitorHeight = GetMonitorHeight(monitor);
         SetWindowSize(monitorWidth, monitorHeight);
-        ToggleFullscreen();
+        SetWindowPosition(0, 0);
+        screenWidth = monitorWidth;
+        screenHeight = monitorHeight;
         fullscreen = true;
     }
+
+    UpdateScale();
+    LoadMenuTextures();
+    if (currentMenu == 0) {
+        InitMainMenu();
+    }
+    else {
+        InitChooseModeMenu();
+    }
+
+    // Перезагружаем текстуры с новыми размерами
+    fruitSize = ScaleInt(60);
+
+    // Перезагрузка текстур фруктов
+    Image image = LoadImage("apple.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit0Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("orange.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit1Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("watermelon.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit2Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("pear.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit3Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("bad_fruit1.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit4Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("bad_fruit2.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit5Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("banana.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit6Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("cherry.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit7Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("golden_apple.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit8Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("golden_watermelon.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit9Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("bad_fruit3.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit10Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("golden_cherry.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit11Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    image = LoadImage("kiwi.png");
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit12Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    // Перезагрузка текстуры корзины
+    image = LoadImage("basket.png");
+    if (image.data != NULL) {
+        ImageResize(&image, ScaleInt(100), ScaleInt(60));
+        BasketTexture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
+
+    // Сброс игры с новыми размерами
+    ResetGame();
 }
 
 int main(void) {
-    // Получаем размеры монитора для полноэкранного режима
-    int monitor = GetCurrentMonitor();
-    int monitorWidth = GetMonitorWidth(monitor);
-    int monitorHeight = GetMonitorHeight(monitor);
+    // Сначала создаем окно в оконном режиме с базовым разрешением
+    screenWidth = baseWidth;
+    screenHeight = baseHeight;
 
-    InitWindow(0, 0, "FruityDrop");
+    // Создаем окно без флага полноэкранного режима
+    InitWindow(screenWidth, screenHeight, "FruityDrop");
+
+    // Проверяем, успешно ли создано окно
+    if (!IsWindowReady()) {
+        // Если окно не создано, выходим
+        return -1;
+    }
+
+    // Изначально устанавливаем оконный режим
+    fullscreen = false;
+
     SetTargetFPS(60);
+
+    UpdateScale();
 
     LoadPlayerScores();
     ResetGame();
     std::vector<Fruit> fruits;
 
-    // Загрузка текстур меню
+    // Сначала загружаем текстуры меню
     LoadMenuTextures();
-
-    // Инициализация меню
     InitMainMenu();
 
-    fruitSize = 60 * GetScreenWidth() / 1920;
+    // Загружаем текстуры фруктов и корзины
+    fruitSize = ScaleInt(60);
 
-    // Загрузка текстур фруктов
+    // Загрузка текстур фруктов с масштабированием
     Image image = LoadImage("apple.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit0Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit0Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("orange.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit1Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit1Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("watermelon.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit2Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit2Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("pear.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit3Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit3Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("bad_fruit1.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit4Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit4Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("bad_fruit2.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit5Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit5Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("banana.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit6Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit6Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("cherry.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit7Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit7Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("golden_apple.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit8Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit8Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("golden_watermelon.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit9Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit9Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("bad_fruit3.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit10Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit10Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("golden_cherry.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit11Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit11Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     image = LoadImage("kiwi.png");
-    ImageResize(&image, fruitSize, fruitSize);
-    Fruit12Texture = LoadTextureFromImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, fruitSize, fruitSize);
+        Fruit12Texture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     // Загрузка текстуры корзины
     image = LoadImage("basket.png");
-    ImageResize(&image, 100 * GetScreenWidth() / 1920, 60 * GetScreenHeight() / 1080);
-    BasketTexture = LoadTextureFromImage(image);
-
-    UnloadImage(image);
+    if (image.data != NULL) {
+        ImageResize(&image, ScaleInt(100), ScaleInt(60));
+        BasketTexture = LoadTextureFromImage(image);
+        UnloadImage(image);
+    }
 
     while (!WindowShouldClose()) {
-        // Проверка на выход из игры
-        if (gameMode == 5) {
-            break;
-        }
+        if (gameMode == 5) break;
 
-        // Проверяем состояние геймпадов
         CheckGamepads();
 
-        // Переключение полноэкранного режима по F11
         if (IsKeyPressed(KEY_F11)) {
             ToggleFullscreen();
         }
 
         BeginDrawing();
 
-        // Всегда рисуем фон на весь экран
-        DrawTexture(backgroundTexture, 0, 0, WHITE);
-
-        // Если показываем таблицу рекордов
         if (showTopRating) {
             DrawTopRating();
             if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE)) {
@@ -1568,13 +1630,10 @@ int main(void) {
             continue;
         }
 
-        // Меню или игра
         if (gameMode == 0) {
-            // Обновляем навигацию по меню
             UpdateMenuNavigation();
             UpdateMenuMouse();
 
-            // Рисуем соответствующее меню
             if (currentMenu == 0) {
                 DrawMainMenu();
             }
@@ -1586,26 +1645,26 @@ int main(void) {
             continue;
         }
 
-        // Игровой процесс (режимы 1-4)
         if (!gameOver) {
-            // Starting screen 
             if (!gameStarted) {
-                // Добавляем полупрозрачный слой поверх фона
-                DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.3f));
+                // Очищаем экран перед отрисовкой
+                ClearBackground(BLACK);
 
-                // Screen split (DRAW)
-                DrawRectangle(0, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(SKYBLUE, 0.1f));
-                DrawRectangle(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(LIGHTGRAY, 0.1f));
-                DrawLine(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), DARKGRAY);
+                DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.3f));
+                if (gameMode == 4) {
+                    DrawRectangle(0, 0, screenWidth / 2, screenHeight, Fade(SKYBLUE, 0.1f));
+                    DrawRectangle(screenWidth / 2, 0, screenWidth / 2, screenHeight, Fade(LIGHTGRAY, 0.1f));
+                    DrawLine(screenWidth / 2, 0, screenWidth / 2, screenHeight, DARKGRAY);
+                }
 
-                // Basket (DRAW) - теперь с текстурой
                 DrawTexture(BasketTexture, player1.basket.x, player1.basket.y, player1.color);
-                DrawTexture(BasketTexture, player2.basket.x, player2.basket.y, player2.color);
+                if (gameMode == 4) {
+                    DrawTexture(BasketTexture, player2.basket.x, player2.basket.y, player2.color);
+                }
 
-                // Players info (DRAW)
-                int instructionFontSize = 25 * GetScreenWidth() / 1920;
-
+                int instructionFontSize = ScaleInt(25);
                 const char* modeName = "";
+
                 switch (gameMode) {
                 case 1: modeName = "CLASSIC MODE"; break;
                 case 2: modeName = "SURVIVAL MODE"; break;
@@ -1613,46 +1672,45 @@ int main(void) {
                 case 4: modeName = "TWO PLAYERS MODE"; break;
                 }
 
-                DrawText(modeName, GetScreenWidth() / 2 - MeasureText(modeName, instructionFontSize + 10) / 2,
-                    GetScreenHeight() / 2 - 100, instructionFontSize + 10, YELLOW);
+                DrawText(modeName, screenWidth / 2 - MeasureText(modeName, instructionFontSize + 10) / 2,
+                    screenHeight / 2 - 100, instructionFontSize + 10, YELLOW);
 
                 DrawText("Catch good fruits, avoid bad ones!",
-                    GetScreenWidth() / 2 - MeasureText("Catch good fruits, avoid bad ones!", instructionFontSize) / 2,
-                    GetScreenHeight() / 2 - 40, instructionFontSize, WHITE);
+                    screenWidth / 2 - MeasureText("Catch good fruits, avoid bad ones!", instructionFontSize) / 2,
+                    screenHeight / 2 - 40, instructionFontSize, WHITE);
                 DrawText("Collect bonus fruits for special effects!",
-                    GetScreenWidth() / 2 - MeasureText("Collect bonus fruits for special effects!", instructionFontSize) / 2,
-                    GetScreenHeight() / 2, instructionFontSize, WHITE);
+                    screenWidth / 2 - MeasureText("Collect bonus fruits for special effects!", instructionFontSize) / 2,
+                    screenHeight / 2, instructionFontSize, WHITE);
                 DrawText("Press SPACE to start the game!",
-                    GetScreenWidth() / 2 - MeasureText("Press SPACE to start the game!", instructionFontSize + 5) / 2,
-                    GetScreenHeight() / 2 + 60, instructionFontSize + 5, GREEN);
+                    screenWidth / 2 - MeasureText("Press SPACE to start the game!", instructionFontSize + 5) / 2,
+                    screenHeight / 2 + 60, instructionFontSize + 5, GREEN);
 
                 if (gameMode == 4) {
-                    DrawText("PLAYER 1", 10, 20, instructionFontSize, BLUE);
-                    DrawText("A/D keys to move", 10, 50, instructionFontSize - 5, DARKBLUE);
+                    DrawText("PLAYER 1", ScaleInt(20), ScaleInt(20), instructionFontSize, BLUE);
+                    DrawText("A/D keys to move", ScaleInt(20), ScaleInt(50), instructionFontSize - 5, DARKBLUE);
                     if (gamepad1.connected) {
-                        DrawText("Gamepad: LEFT/RIGHT stick", 20, 75, instructionFontSize - 5, GREEN);
-                        DrawText("X button: switch stick", 20, 100, instructionFontSize - 5, YELLOW);
+                        DrawText("Gamepad: LEFT/RIGHT stick", ScaleInt(30), ScaleInt(75), instructionFontSize - 5, GREEN);
+                        DrawText("X button: switch stick", ScaleInt(30), ScaleInt(100), instructionFontSize - 5, YELLOW);
                     }
 
-                    DrawText("PLAYER 2", GetScreenWidth() - MeasureText("PLAYER 2", instructionFontSize) - 10, 20, instructionFontSize, RED);
-                    DrawText("Arrow keys to move", GetScreenWidth() - MeasureText("Arrow keys to move", instructionFontSize - 5) - 10, 50, instructionFontSize - 5, DARKBLUE);
+                    DrawText("PLAYER 2", screenWidth - ScaleInt(200), ScaleInt(20), instructionFontSize, RED);
+                    DrawText("Arrow keys to move", screenWidth - ScaleInt(200), ScaleInt(50), instructionFontSize - 5, DARKBLUE);
                     if (gamepad2.connected) {
-                        DrawText("Gamepad: LEFT/RIGHT stick", GetScreenWidth() - MeasureText("Gamepad: LEFT/RIGHT stick", instructionFontSize - 5) - 10, 75, instructionFontSize - 5, GREEN);
-                        DrawText("X button: switch stick", GetScreenWidth() - MeasureText("X button: switch stick", instructionFontSize - 5) - 10, 100, instructionFontSize - 5, YELLOW);
+                        DrawText("Gamepad: LEFT/RIGHT stick", screenWidth - ScaleInt(190), ScaleInt(75), instructionFontSize - 5, GREEN);
+                        DrawText("X button: switch stick", screenWidth - ScaleInt(190), ScaleInt(100), instructionFontSize - 5, YELLOW);
                     }
                 }
                 else {
                     DrawText("Controls: A/D or Arrow keys to move",
-                        GetScreenWidth() / 2 - MeasureText("Controls: A/D or Arrow keys to move", instructionFontSize) / 2,
-                        GetScreenHeight() / 2 + 120, instructionFontSize, WHITE);
+                        screenWidth / 2 - MeasureText("Controls: A/D or Arrow keys to move", instructionFontSize) / 2,
+                        screenHeight / 2 + 120, instructionFontSize, WHITE);
                     if (gamepad1.connected) {
                         DrawText("Gamepad also supported",
-                            GetScreenWidth() / 2 - MeasureText("Gamepad also supported", instructionFontSize) / 2,
-                            GetScreenHeight() / 2 + 160, instructionFontSize, GREEN);
+                            screenWidth / 2 - MeasureText("Gamepad also supported", instructionFontSize) / 2,
+                            screenHeight / 2 + 160, instructionFontSize, GREEN);
                     }
                 }
 
-                //Can start the game with START button in the gamepad 
                 bool startPressed = IsKeyPressed(KEY_SPACE);
                 if (gamepad1.connected && IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_MIDDLE_RIGHT)) {
                     startPressed = true;
@@ -1669,33 +1727,28 @@ int main(void) {
                 continue;
             }
 
-            // Основной игровой процесс
             UpdateBonusEffects();
 
-            // Controls - только для живых игроков
             if (gameMode == 4) {
-                // Player 1 управление: геймпад или клавиатура 
                 if (player1.isAlive) {
                     if (gamepad1.connected) {
                         MoveRectangleWithGamepad(player1.basket, gamepad1, 1);
                     }
                     else {
-                        MoveRectangle(player1.basket, false, 1); // Клавиши A/D
+                        MoveRectangle(player1.basket, false, 1);
                     }
                 }
 
-                // Player 2 управление: геймпад или клавиатура  
                 if (player2.isAlive) {
                     if (gamepad2.connected) {
                         MoveRectangleWithGamepad(player2.basket, gamepad2, 2);
                     }
                     else {
-                        MoveRectangle(player2.basket, true, 2); // Стрелки
+                        MoveRectangle(player2.basket, true, 2);
                     }
                 }
             }
             else {
-                // Одиночные режимы - можно использовать геймпад 1
                 if (gamepad1.connected) {
                     MoveRectangleWithGamepad(player1.basket, gamepad1);
                 }
@@ -1704,7 +1757,6 @@ int main(void) {
                 }
             }
 
-            // Timer only for Time Attack and Two Players modes
             if (gameMode == 3 || gameMode == 4) {
                 gameTime -= GetFrameTime();
                 if (gameTime <= 0) {
@@ -1713,32 +1765,27 @@ int main(void) {
             }
 
             if (gameMode == 4) {
-                // In 2 players game modes, the game end when the timer end or if the 2 players are dead 
                 if (gameTime <= 0 || (!player1.isAlive && !player2.isAlive)) {
                     gameOver = true;
                 }
             }
             else if (gameMode == 1 || gameMode == 2 || gameMode == 3) {
-                // Solo game modes (Classic, Survival, Time Attack)
                 if (player1.lives <= 0 || player1.missedFruits >= 10) {
                     gameOver = true;
                 }
             }
 
-            // Spawn fruits only for alive players 
             timeSinceLastSpawn += GetFrameTime();
             if (timeSinceLastSpawn >= spawnRate) {
                 if (gameMode == 4) {
-                    // Spawn fruits only for alive players 
-                    if (player1.isAlive) fruits.push_back(CreateFruit(1)); // Для игрока 1
-                    if (player2.isAlive) fruits.push_back(CreateFruit(2)); // Для игрока 2
+                    if (player1.isAlive) fruits.push_back(CreateFruit(1));
+                    if (player2.isAlive) fruits.push_back(CreateFruit(2));
                 }
                 else {
                     fruits.push_back(CreateFruit());
                 }
                 timeSinceLastSpawn = 0.0f;
 
-                // Difficulty settings
                 if (gameMode == 2) {
                     spawnRate = 0.5f;
                     fruitSpeed = 5.0f;
@@ -1755,16 +1802,15 @@ int main(void) {
 
             UpdateFruits(fruits);
 
-            // Drawing
+            // Очищаем экран перед отрисовкой игрового поля
+            ClearBackground(BLACK);
+            DrawTexture(backgroundTexture, 0, 0, WHITE);
+
             if (gameMode == 4) {
-                // Splited Screen for 2 players 
-                DrawRectangle(0, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(SKYBLUE, 0.1f));
-                DrawRectangle(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), Fade(LIGHTGRAY, 0.1f));
+                DrawRectangle(0, 0, screenWidth / 2, screenHeight, Fade(SKYBLUE, 0.1f));
+                DrawRectangle(screenWidth / 2, 0, screenWidth / 2, screenHeight, Fade(LIGHTGRAY, 0.1f));
+                DrawLine(screenWidth / 2, 0, screenWidth / 2, screenHeight, DARKGRAY);
 
-                // Splited screen middle line 
-                DrawLine(GetScreenWidth() / 2, 0, GetScreenWidth() / 2, GetScreenHeight(), DARKGRAY);
-
-                // Basket only for alive players - теперь с текстурой
                 if (player1.isAlive) DrawTexture(BasketTexture, player1.basket.x, player1.basket.y, player1.color);
                 if (player2.isAlive) DrawTexture(BasketTexture, player2.basket.x, player2.basket.y, player2.color);
             }
@@ -1774,142 +1820,149 @@ int main(void) {
 
             DrawFruits(fruits);
 
-            // UI
-            int uiFontSize = 25 * GetScreenWidth() / 1920;
-            int smallFontSize = 20 * GetScreenWidth() / 1920;
+            int uiFontSize = ScaleInt(25);
+            int smallFontSize = ScaleInt(20);
 
-            // Полупрозрачный фон для текста UI
-            DrawRectangle(0, 0, GetScreenWidth(), 180, Fade(BLACK, 0.5f));
+            // Фон для интерфейса - теперь вверху экрана
+            DrawRectangle(0, 0, screenWidth, ScaleIntY(200), Fade(BLACK, 0.5f));
 
             if (gameMode == 4) {
-                // Player 1 (DRAW TEXT) 
-                int playerInfoY = 20;
+                int playerInfoY = ScaleIntY(20);
+                int lineHeight = ScaleIntY(35);
 
-                DrawText("PLAYER 1", 20, playerInfoY, uiFontSize, BLUE);
-                DrawText(TextFormat("Score: %d", player1.score), 20, playerInfoY + 30, smallFontSize, WHITE);
-                DrawText(TextFormat("Lives: %d", player1.lives), 20, playerInfoY + 55, smallFontSize, player1.isAlive ? RED : GRAY);
-                DrawText(TextFormat("Missed: %d/10", player1.missedFruits), 20, playerInfoY + 80, smallFontSize, WHITE);
-                if (!player1.isAlive) DrawText("ELIMINATED!", 20, playerInfoY + 105, smallFontSize - 5, RED);
+                // Игрок 1 (слева)
+                DrawText("PLAYER 1", ScaleInt(20), playerInfoY, uiFontSize, BLUE);
+                DrawText(TextFormat("Score: %d", player1.score), ScaleInt(20), playerInfoY + lineHeight, smallFontSize, WHITE);
+                DrawText(TextFormat("Lives: %d", player1.lives), ScaleInt(20), playerInfoY + 2 * lineHeight, smallFontSize, player1.isAlive ? RED : GRAY);
+                DrawText(TextFormat("Missed: %d/10", player1.missedFruits), ScaleInt(20), playerInfoY + 3 * lineHeight, smallFontSize, WHITE);
+                if (!player1.isAlive) DrawText("ELIMINATED!", ScaleInt(20), playerInfoY + 4 * lineHeight, smallFontSize - 5, RED);
 
-                // Player 2 UI (DRAW TEXT) 
-                DrawText("PLAYER 2", GetScreenWidth() - 150, playerInfoY, uiFontSize, RED);
-                DrawText(TextFormat("Score: %d", player2.score), GetScreenWidth() - 150, playerInfoY + 30, smallFontSize, WHITE);
-                DrawText(TextFormat("Lives: %d", player2.lives), GetScreenWidth() - 150, playerInfoY + 55, smallFontSize, player2.isAlive ? RED : GRAY);
-                DrawText(TextFormat("Missed: %d/10", player2.missedFruits), GetScreenWidth() - 150, playerInfoY + 80, smallFontSize, WHITE);
-                if (!player2.isAlive) DrawText("ELIMINATED!", GetScreenWidth() - 150, playerInfoY + 105, smallFontSize - 5, RED);
+                // Игрок 2 (справа)
+                DrawText("PLAYER 2", screenWidth - ScaleInt(150), playerInfoY, uiFontSize, RED);
+                DrawText(TextFormat("Score: %d", player2.score), screenWidth - ScaleInt(150), playerInfoY + lineHeight, smallFontSize, WHITE);
+                DrawText(TextFormat("Lives: %d", player2.lives), screenWidth - ScaleInt(150), playerInfoY + 2 * lineHeight, smallFontSize, player2.isAlive ? RED : GRAY);
+                DrawText(TextFormat("Missed: %d/10", player2.missedFruits), screenWidth - ScaleInt(150), playerInfoY + 3 * lineHeight, smallFontSize, WHITE);
+                if (!player2.isAlive) DrawText("ELIMINATED!", screenWidth - ScaleInt(150), playerInfoY + 4 * lineHeight, smallFontSize - 5, RED);
 
-                // Timer in the middle of the screen (DRAW TEXT) 
-                DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() / 2 - 40, 50, uiFontSize, YELLOW);
+                // Время по центру
+                DrawText(TextFormat("Time: %d", static_cast<int>(gameTime)), screenWidth / 2 - ScaleInt(40), playerInfoY, uiFontSize, YELLOW);
 
-                // Showing bonus for each players  
-                int bonusY1 = playerInfoY + 130; // Player Info 
-                int bonusY2 = playerInfoY + 130;
+                // Бонусы игроков
+                int bonusY1 = playerInfoY + 5 * lineHeight;
+                int bonusY2 = playerInfoY + 5 * lineHeight;
 
-                // Players bonus Info (DRAW TEXT) - Left side 
                 if (player1.isAlive) {
                     if (player1.bonuses.slowMotionActive) {
-                        DrawText("Slow Motion!", 20, bonusY1, smallFontSize - 5, BLUE);
-                        bonusY1 += 20;
+                        DrawText("Slow Motion!", ScaleInt(20), bonusY1, smallFontSize - 5, BLUE);
+                        bonusY1 += ScaleIntY(20);
                     }
                     if (player1.bonuses.doublePointsActive) {
-                        DrawText("Double Points!", 20, bonusY1, smallFontSize - 5, GOLD);
-                        bonusY1 += 20;
+                        DrawText("Double Points!", ScaleInt(20), bonusY1, smallFontSize - 5, GOLD);
+                        bonusY1 += ScaleIntY(20);
                     }
                     if (player1.bonuses.speedBoostActive) {
-                        DrawText("Speed Boost!", 20, bonusY1, smallFontSize - 5, ORANGE);
-                        bonusY1 += 20;
+                        DrawText("Speed Boost!", ScaleInt(20), bonusY1, smallFontSize - 5, ORANGE);
+                        bonusY1 += ScaleIntY(20);
                     }
                     if (player1.bonuses.freezeActive) {
-                        DrawText("Freeze!", 20, bonusY1, smallFontSize - 5, SKYBLUE);
-                        bonusY1 += 20;
+                        DrawText("Freeze!", ScaleInt(20), bonusY1, smallFontSize - 5, SKYBLUE);
+                        bonusY1 += ScaleIntY(20);
                     }
                 }
 
-                // Two Players bonus Info (DRAW TEXT) - right side
                 if (player2.isAlive) {
                     if (player2.bonuses.slowMotionActive) {
-                        DrawText("Slow Motion!", GetScreenWidth() - 150, bonusY2, smallFontSize - 5, BLUE);
-                        bonusY2 += 20;
+                        DrawText("Slow Motion!", screenWidth - ScaleInt(150), bonusY2, smallFontSize - 5, BLUE);
+                        bonusY2 += ScaleIntY(20);
                     }
                     if (player2.bonuses.doublePointsActive) {
-                        DrawText("Double Points!", GetScreenWidth() - 150, bonusY2, smallFontSize - 5, GOLD);
-                        bonusY2 += 20;
+                        DrawText("Double Points!", screenWidth - ScaleInt(150), bonusY2, smallFontSize - 5, GOLD);
+                        bonusY2 += ScaleIntY(20);
                     }
                     if (player2.bonuses.speedBoostActive) {
-                        DrawText("Speed Boost!", GetScreenWidth() - 150, bonusY2, smallFontSize - 5, ORANGE);
-                        bonusY2 += 20;
+                        DrawText("Speed Boost!", screenWidth - ScaleInt(150), bonusY2, smallFontSize - 5, ORANGE);
+                        bonusY2 += ScaleIntY(20);
                     }
                     if (player2.bonuses.freezeActive) {
-                        DrawText("Freeze!", GetScreenWidth() - 150, bonusY2, smallFontSize - 5, SKYBLUE);
-                        bonusY2 += 20;
+                        DrawText("Freeze!", screenWidth - ScaleInt(150), bonusY2, smallFontSize - 5, SKYBLUE);
+                        bonusY2 += ScaleIntY(20);
                     }
                 }
 
-                // Gamepads info (DRAW TEXT) 
                 DrawGamepadInfo();
 
-                // Lead system for 2 Players mode (Showing who, of the 2 Players are leading) 
+                // Нижний текст - теперь выше и не выходит за пределы экрана
+                int bottomTextY = screenHeight - ScaleIntY(80);
                 if (player1.isAlive && player2.isAlive) {
+                    const char* text = "";
+                    Color textColor = WHITE;
                     if (player1.score > player2.score) {
-                        DrawText("PLAYER 1 LEADING!", GetScreenWidth() / 2 - 80, GetScreenHeight() - 60, smallFontSize, BLUE);
+                        text = "PLAYER 1 LEADING!";
+                        textColor = BLUE;
                     }
                     else if (player2.score > player1.score) {
-                        DrawText("PLAYER 2 LEADING!", GetScreenWidth() / 2 - 80, GetScreenHeight() - 60, smallFontSize, RED);
+                        text = "PLAYER 2 LEADING!";
+                        textColor = RED;
                     }
                     else {
-                        DrawText("TIE!", GetScreenWidth() / 2 - 20, GetScreenHeight() - 60, smallFontSize, PURPLE);
+                        text = "TIE!";
+                        textColor = PURPLE;
                     }
+                    int textWidth = MeasureText(text, smallFontSize);
+                    DrawText(text, screenWidth / 2 - textWidth / 2, bottomTextY, smallFontSize, textColor);
                 }
                 else if (player1.isAlive && !player2.isAlive) {
-                    DrawText("PLAYER 1 WINS BY ELIMINATION!", GetScreenWidth() / 2 - 140, GetScreenHeight() - 60, smallFontSize, BLUE);
+                    const char* text = "PLAYER 1 WINS BY ELIMINATION!";
+                    int textWidth = MeasureText(text, smallFontSize);
+                    DrawText(text, screenWidth / 2 - textWidth / 2, bottomTextY, smallFontSize, BLUE);
                 }
                 else if (!player1.isAlive && player2.isAlive) {
-                    DrawText("PLAYER 2 WINS BY ELIMINATION!", GetScreenWidth() / 2 - 140, GetScreenHeight() - 60, smallFontSize, RED);
+                    const char* text = "PLAYER 2 WINS BY ELIMINATION!";
+                    int textWidth = MeasureText(text, smallFontSize);
+                    DrawText(text, screenWidth / 2 - textWidth / 2, bottomTextY, smallFontSize, RED);
                 }
             }
             else {
-                // Solo modes (Draw Text) 
-                DrawText("Score:", 10, 20, uiFontSize, WHITE);
-                DrawText(TextFormat("%d", player1.score), 120, 20, uiFontSize, WHITE);
+                int uiY = ScaleIntY(20);
+                int lineHeight = ScaleIntY(40);
 
-                DrawText("Lives:", 10, 60, uiFontSize, WHITE);
-                DrawText(TextFormat("%d", player1.lives), 120, 60, uiFontSize, RED);
+                DrawText("Score:", ScaleInt(10), uiY, uiFontSize, WHITE);
+                DrawText(TextFormat("%d", player1.score), ScaleInt(120), uiY, uiFontSize, WHITE);
 
-                DrawText("Missed:", 10, 100, smallFontSize, WHITE);
-                DrawText(TextFormat("%d/10", player1.missedFruits), 120, 100, smallFontSize, WHITE);
+                DrawText("Lives:", ScaleInt(10), uiY + lineHeight, uiFontSize, WHITE);
+                DrawText(TextFormat("%d", player1.lives), ScaleInt(120), uiY + lineHeight, uiFontSize, RED);
+
+                DrawText("Missed:", ScaleInt(10), uiY + 2 * lineHeight, smallFontSize, WHITE);
+                DrawText(TextFormat("%d/10", player1.missedFruits), ScaleInt(120), uiY + 2 * lineHeight, smallFontSize, WHITE);
 
                 if (gameMode == 3) {
-                    DrawText(TextFormat("Time: %d", (int)gameTime), GetScreenWidth() - 150, 40, uiFontSize, YELLOW);
+                    DrawText(TextFormat("Time: %d", static_cast<int>(gameTime)), screenWidth - ScaleInt(150), ScaleIntY(40), uiFontSize, YELLOW);
                 }
 
-                // Showing the active bonus 
-                int bonusY = 130;
+                int bonusY = uiY + 3 * lineHeight;
                 if (slowMotionActive) {
-                    DrawText("Slow Motion!", 10, bonusY, smallFontSize, BLUE);
-                    bonusY += 25;
+                    DrawText("Slow Motion!", ScaleInt(10), bonusY, smallFontSize, BLUE);
+                    bonusY += ScaleIntY(25);
                 }
                 if (doublePointsActive) {
-                    DrawText("Double Points!", 10, bonusY, smallFontSize, GOLD);
-                    bonusY += 25;
+                    DrawText("Double Points!", ScaleInt(10), bonusY, smallFontSize, GOLD);
+                    bonusY += ScaleIntY(25);
                 }
                 if (speedBoostActive) {
-                    DrawText("Speed Boost!", 10, bonusY, smallFontSize, ORANGE);
-                    bonusY += 25;
+                    DrawText("Speed Boost!", ScaleInt(10), bonusY, smallFontSize, ORANGE);
+                    bonusY += ScaleIntY(25);
                 }
                 if (freezeActive) {
-                    DrawText("Freeze!", 10, bonusY, smallFontSize, SKYBLUE);
-                    bonusY += 25;
+                    DrawText("Freeze!", ScaleInt(10), bonusY, smallFontSize, SKYBLUE);
+                    bonusY += ScaleIntY(25);
                 }
 
-                // Gamepads infos for 1 players mods 
                 if (gamepad1.connected) {
-                    DrawText("Gamepad Connected", GetScreenWidth() - 200, GetScreenHeight() - 40, smallFontSize - 2, GREEN);
+                    DrawText("Gamepad Connected", screenWidth - ScaleInt(200), screenHeight - ScaleIntY(40), smallFontSize - 2, GREEN);
                 }
             }
-
         }
         else {
-            // Game over screen - records save 
             const char* modeName = "";
             std::string modeStr = "";
 
@@ -1935,7 +1988,6 @@ int main(void) {
                 SavePlayerScore(player2.score, modeStr, 2);
             }
 
-            // Verifying if the previous record is beated  
             bool newRecord1 = false;
             bool newRecord2 = false;
 
@@ -1949,44 +2001,45 @@ int main(void) {
                 else if (gameMode == 3 && player1.score > playerScores.timeAttackBest) newRecord1 = true;
             }
 
-            // Темный полупрозрачный фон для game over экрана
-            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.7f));
+            // Очищаем экран
+            ClearBackground(BLACK);
 
-            int gameOverFontSize = 40 * GetScreenWidth() / 1920;
-            int resultFontSize = 30 * GetScreenWidth() / 1920;
-            int smallResultFontSize = 25 * GetScreenWidth() / 1920;
+            DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.7f));
 
-            DrawText("Game Over!", GetScreenWidth() / 2 - 80, 150, gameOverFontSize, RED);
+            int gameOverFontSize = ScaleInt(40);
+            int resultFontSize = ScaleInt(30);
+            int smallResultFontSize = ScaleInt(25);
+
+            DrawText("Game Over!", screenWidth / 2 - ScaleInt(80), ScaleIntY(150), gameOverFontSize, RED);
 
             if (newRecord1) {
-                DrawText("PLAYER 1 NEW RECORD!", GetScreenWidth() / 2 - 100, 190, smallResultFontSize, GOLD);
+                DrawText("PLAYER 1 NEW RECORD!", screenWidth / 2 - ScaleInt(100), ScaleIntY(190), smallResultFontSize, GOLD);
             }
             if (newRecord2) {
-                DrawText("PLAYER 2 NEW RECORD!", GetScreenWidth() / 2 - 100, 220, smallResultFontSize, GOLD);
+                DrawText("PLAYER 2 NEW RECORD!", screenWidth / 2 - ScaleInt(100), ScaleIntY(220), smallResultFontSize, GOLD);
             }
 
             if (gameMode == 4) {
-                DrawText(TextFormat("Player 1 Score: %d", player1.score), GetScreenWidth() / 2 - 100, 260, smallResultFontSize, BLUE);
-                DrawText(TextFormat("Player 2 Score: %d", player2.score), GetScreenWidth() / 2 - 100, 290, smallResultFontSize, RED);
+                DrawText(TextFormat("Player 1 Score: %d", player1.score), screenWidth / 2 - ScaleInt(100), ScaleIntY(260), smallResultFontSize, BLUE);
+                DrawText(TextFormat("Player 2 Score: %d", player2.score), screenWidth / 2 - ScaleInt(100), ScaleIntY(290), smallResultFontSize, RED);
 
                 if (player1.score > player2.score) {
-                    DrawText("PLAYER 1 WINS!", GetScreenWidth() / 2 - 80, 330, resultFontSize, BLUE);
+                    DrawText("PLAYER 1 WINS!", screenWidth / 2 - ScaleInt(80), ScaleIntY(330), resultFontSize, BLUE);
                 }
                 else if (player2.score > player1.score) {
-                    DrawText("PLAYER 2 WINS!", GetScreenWidth() / 2 - 80, 330, resultFontSize, RED);
+                    DrawText("PLAYER 2 WINS!", screenWidth / 2 - ScaleInt(80), ScaleIntY(330), resultFontSize, RED);
                 }
                 else {
-                    DrawText("DRAW!", GetScreenWidth() / 2 - 40, 330, resultFontSize, PURPLE);
+                    DrawText("DRAW!", screenWidth / 2 - ScaleInt(40), ScaleIntY(330), resultFontSize, PURPLE);
                 }
             }
             else {
-                DrawText(TextFormat("Final Score: %d", player1.score), GetScreenWidth() / 2 - 70, 260, resultFontSize, WHITE);
+                DrawText(TextFormat("Final Score: %d", player1.score), screenWidth / 2 - ScaleInt(70), ScaleIntY(260), resultFontSize, WHITE);
             }
 
-            DrawText("Press SPACE for menu", GetScreenWidth() / 2 - 100, 390, smallResultFontSize - 5, WHITE);
-            DrawText("Press R for Records", GetScreenWidth() / 2 - 100, 420, smallResultFontSize - 5, WHITE);
+            DrawText("Press SPACE for menu", screenWidth / 2 - ScaleInt(100), ScaleIntY(390), smallResultFontSize - 5, WHITE);
+            DrawText("Press R for Records", screenWidth / 2 - ScaleInt(100), ScaleIntY(420), smallResultFontSize - 5, WHITE);
 
-            // Press START button in gamepad to launch the game 
             bool menuPressed = IsKeyPressed(KEY_SPACE);
             if (gamepad1.connected && IsGamepadButtonPressed(gamepad1.gamepadNumber, GAMEPAD_BUTTON_MIDDLE_RIGHT)) {
                 menuPressed = true;
@@ -1996,7 +2049,7 @@ int main(void) {
             }
 
             if (menuPressed) {
-                gameMode = 0; // Back to menu
+                gameMode = 0;
                 currentMenu = 0;
                 selectedButton = 0;
                 fruits.clear();
@@ -2007,7 +2060,6 @@ int main(void) {
             }
         }
 
-        // back to menu with Q (ESC not working) 
         if (IsKeyPressed(KEY_Q)) {
             if (gameMode != 0) {
                 gameMode = 0;
@@ -2024,7 +2076,6 @@ int main(void) {
         EndDrawing();
     }
 
-    // Unloading textures 
     UnloadTexture(Fruit0Texture);
     UnloadTexture(Fruit1Texture);
     UnloadTexture(Fruit2Texture);
@@ -2040,7 +2091,6 @@ int main(void) {
     UnloadTexture(Fruit12Texture);
     UnloadTexture(BasketTexture);
 
-    // Выгрузка текстур меню
     UnloadTexture(playBigTexture);
     UnloadTexture(recTexture);
     UnloadTexture(howToPlayTexture);
