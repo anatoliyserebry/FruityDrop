@@ -1363,15 +1363,28 @@ void ToggleFullscreen() {
     }
 
     UpdateScale();
+
+    // Перезагружаем текстуры меню
+    UnloadTexture(backgroundTexture);
+    UnloadTexture(playBigTexture);
+    UnloadTexture(recTexture);
+    UnloadTexture(howToPlayTexture);
+    UnloadTexture(exitTexture);
+    UnloadTexture(playSmallTexture);
+
     LoadMenuTextures();
-    if (currentMenu == 0) {
-        InitMainMenu();
-    }
-    else {
-        InitChooseModeMenu();
+
+    // Переинициализируем меню в зависимости от текущего состояния
+    if (gameMode == 0) {
+        if (currentMenu == 0) {
+            InitMainMenu();
+        }
+        else {
+            InitChooseModeMenu();
+        }
     }
 
-    // Перезагружаем текстуры с новыми размерами
+    // Перезагружаем текстуры фруктов и корзины с новыми размерами
     fruitSize = ScaleInt(60);
 
     // Перезагрузка текстур фруктов
@@ -2054,6 +2067,7 @@ int main(void) {
                 selectedButton = 0;
                 fruits.clear();
                 ResetGame();
+                InitMainMenu(); // Добавляем инициализацию меню при возврате
             }
             if (IsKeyPressed(KEY_R)) {
                 showTopRating = true;
@@ -2067,6 +2081,7 @@ int main(void) {
                 selectedButton = 0;
                 fruits.clear();
                 ResetGame();
+                InitMainMenu(); // Добавляем инициализацию меню при возврате
             }
             else if (showTopRating) {
                 showTopRating = false;
