@@ -10,7 +10,7 @@ int baseWidth = 1920;
 int baseHeight = 1080;
 int screenWidth;
 int screenHeight;
-int fruitSize;
+int fruitSize;  // Будет установлено в 90 пикселей (увеличенный размер)
 Texture2D Fruit0Texture;
 Texture2D Fruit1Texture;
 Texture2D Fruit2Texture;
@@ -126,6 +126,7 @@ int gameMode = 0;
 float gameTime = 120.0f;
 bool gameOver = false;
 bool showTopRating = false;
+bool showHowToPlay = false;  // Новая переменная для экрана How To Play
 bool gameStarted = false;
 bool fullscreen = true;
 
@@ -576,6 +577,147 @@ void DrawTopRating() {
     DrawText("Press Q to return", screenWidth / 2 - ScaleInt(100), screenHeight - ScaleInt(50), smallSize, WHITE);
 }
 
+// Отрисовка экрана How To Play
+void DrawHowToPlay() {
+    // Сначала очищаем экран
+    ClearBackground(BLACK);
+
+    DrawTexture(backgroundTexture, 0, 0, WHITE);
+    DrawRectangle(0, 0, screenWidth, screenHeight, Fade(BLACK, 0.5f));
+
+    int titleSize = ScaleInt(40);
+    int titleWidth = MeasureText("HOW TO PLAY", titleSize);
+    DrawText("HOW TO PLAY", (screenWidth - titleWidth) / 2, ScaleInt(50), titleSize, YELLOW);
+
+    int startY = ScaleInt(120);
+    int sectionSize = ScaleInt(30);
+    int textSize = ScaleInt(22);
+    int smallTextSize = ScaleInt(20);
+
+    // Об игре
+    int aboutWidth = MeasureText("ABOUT THE GAME", sectionSize);
+    DrawText("ABOUT THE GAME", (screenWidth - aboutWidth) / 2, startY, sectionSize, GREEN);
+
+    int line1Width = MeasureText("Catch falling fruits to earn points!", textSize);
+    DrawText("Catch falling fruits to earn points!",
+        (screenWidth - line1Width) / 2,
+        startY + 40, textSize, WHITE);
+
+    int line2Width = MeasureText("Different fruits give different points:", textSize);
+    DrawText("Different fruits give different points:",
+        (screenWidth - line2Width) / 2,
+        startY + 70, textSize, WHITE);
+
+    // Описание фруктов
+    int fruitsStartY = startY + 110;
+    int fruitDescSize = smallTextSize;
+
+    // Good Fruits
+    int goodFruitsWidth = MeasureText("Good Fruits (100 points):", fruitDescSize);
+    DrawText("Good Fruits (100 points):", (screenWidth - goodFruitsWidth) / 2, fruitsStartY, fruitDescSize, GREEN);
+
+    int goodListWidth = MeasureText("- Apple, Orange, Watermelon, Pear", fruitDescSize);
+    DrawText("- Apple, Orange, Watermelon, Pear", (screenWidth - goodListWidth) / 2, fruitsStartY + 25, fruitDescSize, WHITE);
+
+    // Bad Fruits
+    int badFruitsWidth = MeasureText("Bad Fruits (lose 1 life):", fruitDescSize);
+    DrawText("Bad Fruits (lose 1 life):", (screenWidth - badFruitsWidth) / 2, fruitsStartY + 60, fruitDescSize, RED);
+
+    int badListWidth = MeasureText("- Brown and Gray fruits", fruitDescSize);
+    DrawText("- Brown and Gray fruits", (screenWidth - badListWidth) / 2, fruitsStartY + 85, fruitDescSize, WHITE);
+
+    // Bonus Fruits
+    int bonusFruitsWidth = MeasureText("Bonus Fruits (special effects):", fruitDescSize);
+    DrawText("Bonus Fruits (special effects):", (screenWidth - bonusFruitsWidth) / 2, fruitsStartY + 120, fruitDescSize, BLUE);
+
+    int bonus1Width = MeasureText("- Blue: Slow Motion", fruitDescSize);
+    DrawText("- Blue: Slow Motion", (screenWidth - bonus1Width) / 2, fruitsStartY + 145, fruitDescSize, WHITE);
+
+    int bonus2Width = MeasureText("- Gold: Double Points", fruitDescSize);
+    DrawText("- Gold: Double Points", (screenWidth - bonus2Width) / 2, fruitsStartY + 170, fruitDescSize, WHITE);
+
+    int bonus3Width = MeasureText("- Pink: Extra Life", fruitDescSize);
+    DrawText("- Pink: Extra Life", (screenWidth - bonus3Width) / 2, fruitsStartY + 195, fruitDescSize, WHITE);
+
+    int bonus4Width = MeasureText("- Magenta: +10 Seconds", fruitDescSize);
+    DrawText("- Magenta: +10 Seconds", (screenWidth - bonus4Width) / 2, fruitsStartY + 220, fruitDescSize, WHITE);
+
+    int bonus5Width = MeasureText("- Orange: Speed Boost", fruitDescSize);
+    DrawText("- Orange: Speed Boost", (screenWidth - bonus5Width) / 2, fruitsStartY + 245, fruitDescSize, WHITE);
+
+    // Режимы игры
+    int modesStartY = fruitsStartY + 280;
+    int modesWidth = MeasureText("GAME MODES", sectionSize);
+    DrawText("GAME MODES", (screenWidth - modesWidth) / 2, modesStartY, sectionSize, ORANGE);
+
+    int mode1Width = MeasureText("- Classic: Catch fruits, avoid bad ones, 3 lives", fruitDescSize);
+    DrawText("- Classic: Catch fruits, avoid bad ones, 3 lives",
+        (screenWidth - mode1Width) / 2, modesStartY + 40, fruitDescSize, WHITE);
+
+    int mode2Width = MeasureText("- Survival: Fast-paced, unlimited time", fruitDescSize);
+    DrawText("- Survival: Fast-paced, unlimited time",
+        (screenWidth - mode2Width) / 2, modesStartY + 65, fruitDescSize, WHITE);
+
+    int mode3Width = MeasureText("- Time Attack: 2 minutes to score as much as possible", fruitDescSize);
+    DrawText("- Time Attack: 2 minutes to score as much as possible",
+        (screenWidth - mode3Width) / 2, modesStartY + 90, fruitDescSize, WHITE);
+
+    int mode4Width = MeasureText("- Two Players: Compete with a friend!", fruitDescSize);
+    DrawText("- Two Players: Compete with a friend!",
+        (screenWidth - mode4Width) / 2, modesStartY + 115, fruitDescSize, WHITE);
+
+    // Управление
+    int controlsStartY = modesStartY + 155;
+    int controlsWidth = MeasureText("CONTROLS", sectionSize);
+    DrawText("CONTROLS", (screenWidth - controlsWidth) / 2, controlsStartY, sectionSize, PURPLE);
+
+    // Для одного игрока
+    int singlePlayerWidth = MeasureText("Single Player:", fruitDescSize);
+    DrawText("Single Player:", (screenWidth - singlePlayerWidth) / 2, controlsStartY + 40, fruitDescSize, YELLOW);
+
+    int control1Width = MeasureText("- A/D or Arrow Keys: Move basket left/right", fruitDescSize);
+    DrawText("- A/D or Arrow Keys: Move basket left/right",
+        (screenWidth - control1Width) / 2, controlsStartY + 65, fruitDescSize, WHITE);
+
+    int control2Width = MeasureText("- Gamepad (if connected): Left stick or D-Pad", fruitDescSize);
+    DrawText("- Gamepad (if connected): Left stick or D-Pad",
+        (screenWidth - control2Width) / 2, controlsStartY + 90, fruitDescSize, WHITE);
+
+    // Для двух игроков
+    int twoPlayersWidth = MeasureText("Two Players Mode:", fruitDescSize);
+    DrawText("Two Players Mode:", (screenWidth - twoPlayersWidth) / 2, controlsStartY + 125, fruitDescSize, YELLOW);
+
+    int player1Width = MeasureText("- Player 1: A/D Keys", fruitDescSize);
+    DrawText("- Player 1: A/D Keys", (screenWidth - player1Width) / 2, controlsStartY + 150, fruitDescSize, BLUE);
+
+    int player2Width = MeasureText("- Player 2: Arrow Keys", fruitDescSize);
+    DrawText("- Player 2: Arrow Keys", (screenWidth - player2Width) / 2, controlsStartY + 175, fruitDescSize, RED);
+
+    int gamepadWidth = MeasureText("- Gamepad support for both players", fruitDescSize);
+    DrawText("- Gamepad support for both players", (screenWidth - gamepadWidth) / 2, controlsStartY + 200, fruitDescSize, WHITE);
+
+    // Общее управление
+    int generalWidth = MeasureText("General Controls:", fruitDescSize);
+    DrawText("General Controls:", (screenWidth - generalWidth) / 2, controlsStartY + 235, fruitDescSize, YELLOW);
+
+    int general1Width = MeasureText("- F11: Toggle Fullscreen", fruitDescSize);
+    DrawText("- F11: Toggle Fullscreen", (screenWidth - general1Width) / 2, controlsStartY + 260, fruitDescSize, WHITE);
+
+    int general2Width = MeasureText("- Q: Return to menu", fruitDescSize);
+    DrawText("- Q: Return to menu", (screenWidth - general2Width) / 2, controlsStartY + 285, fruitDescSize, WHITE);
+
+    int general3Width = MeasureText("- ESC: Exit game", fruitDescSize);
+    DrawText("- ESC: Exit game", (screenWidth - general3Width) / 2, controlsStartY + 310, fruitDescSize, WHITE);
+
+    int general4Width = MeasureText("- SPACE: Start game/Confirm", fruitDescSize);
+    DrawText("- SPACE: Start game/Confirm", (screenWidth - general4Width) / 2, controlsStartY + 335, fruitDescSize, WHITE);
+
+    // Кнопка возврата
+    int returnWidth = MeasureText("Press Q to return to menu", smallTextSize);
+    DrawText("Press Q to return to menu", (screenWidth - returnWidth) / 2,
+        screenHeight - ScaleInt(50), smallTextSize, WHITE);
+}
+
 // Обработка навигации по меню с геймпада
 void UpdateMenuNavigation() {
     if (gamepadMenuCooldown > 0) {
@@ -683,7 +825,7 @@ void UpdateMenuNavigation() {
                         showTopRating = true;
                     }
                     else if (btn.id == 2) {
-                        // How to Play
+                        showHowToPlay = true;
                     }
                     else if (btn.id == 3) {
                         gameMode = 5;
@@ -750,7 +892,7 @@ void UpdateMenuMouse() {
                         showTopRating = true;
                     }
                     else if (btn.id == 2) {
-                        // How to Play
+                        showHowToPlay = true;
                     }
                     else if (btn.id == 3) {
                         gameMode = 5;
@@ -957,7 +1099,7 @@ void MoveRectangle(Rectangle& rec, bool useArrowKeys, int playerSide = 0) {
 
 Fruit CreateFruit(int playerSide = 0) {
     Fruit fruit;
-    fruitSize = ScaleInt(60);
+    fruitSize = ScaleInt(90); // Увеличенный размер фруктов (было 60)
 
     if (playerSide == 1) {
         fruit.rect = { static_cast<float>(GetRandomValue(ScaleInt(50), screenWidth / 2 - ScaleInt(100))), -ScaleFloat(50), static_cast<float>(fruitSize), static_cast<float>(fruitSize) };
@@ -1298,8 +1440,8 @@ void ResetGame() {
 
     UpdateScale();
 
-    int basketWidth = ScaleInt(100);
-    int basketHeight = ScaleInt(60);
+    int basketWidth = ScaleInt(150); // Увеличенный размер корзины (было 100)
+    int basketHeight = ScaleInt(90); // Увеличенный размер корзины (было 60)
     // Корзины должны быть в самом низу экрана
     int basketYPos = screenHeight - basketHeight - ScaleIntY(50);
 
@@ -1385,7 +1527,7 @@ void ToggleFullscreen() {
     }
 
     // Перезагружаем текстуры фруктов и корзины с новыми размерами
-    fruitSize = ScaleInt(60);
+    fruitSize = ScaleInt(90); // Увеличенный размер фруктов
 
     // Перезагрузка текстур фруктов
     Image image = LoadImage("apple.png");
@@ -1482,7 +1624,7 @@ void ToggleFullscreen() {
     // Перезагрузка текстуры корзины
     image = LoadImage("basket.png");
     if (image.data != NULL) {
-        ImageResize(&image, ScaleInt(100), ScaleInt(60));
+        ImageResize(&image, ScaleInt(150), ScaleInt(90)); // Увеличенный размер корзины
         BasketTexture = LoadTextureFromImage(image);
         UnloadImage(image);
     }
@@ -1521,7 +1663,7 @@ int main(void) {
     InitMainMenu();
 
     // Загружаем текстуры фруктов и корзины
-    fruitSize = ScaleInt(60);
+    fruitSize = ScaleInt(90); // Увеличенный размер фруктов (было 60)
 
     // Загрузка текстур фруктов с масштабированием
     Image image = LoadImage("apple.png");
@@ -1618,7 +1760,7 @@ int main(void) {
     // Загрузка текстуры корзины
     image = LoadImage("basket.png");
     if (image.data != NULL) {
-        ImageResize(&image, ScaleInt(100), ScaleInt(60));
+        ImageResize(&image, ScaleInt(150), ScaleInt(90)); // Увеличенный размер корзины
         BasketTexture = LoadTextureFromImage(image);
         UnloadImage(image);
     }
@@ -1633,6 +1775,15 @@ int main(void) {
         }
 
         BeginDrawing();
+
+        if (showHowToPlay) {
+            DrawHowToPlay();
+            if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE)) {
+                showHowToPlay = false;
+            }
+            EndDrawing();
+            continue;
+        }
 
         if (showTopRating) {
             DrawTopRating();
@@ -2085,6 +2236,9 @@ int main(void) {
             }
             else if (showTopRating) {
                 showTopRating = false;
+            }
+            else if (showHowToPlay) {
+                showHowToPlay = false;
             }
         }
 
